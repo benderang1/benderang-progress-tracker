@@ -1,53 +1,60 @@
-  html {
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+html {
     box-sizing: border-box;
     width: 100%;
-  }
+}
 
-  body {
-    font-family: Arial, sans-serif;
+body {
     align-items: stretch;
+    font-family: "Inter", sans-serif;
     width: 90%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-  }
-  
-  h1, h2 {
-    margin-bottom: 10px;
-  }
+}
 
-  input[type="text"], select, button {
+footer {
+    text-align: center;
+    padding: 10px 0;
+    margin-top: 20px;
+    color: #777;
+}
+
+h1, h2 {
+    margin-bottom: 10px;
+}
+
+input[type="text"], select, button {
     padding: 5px;
     margin: 5px 10px 15px 0;
-  }
+}
 
-  /* container that centers tables and allows horizontal scrolling on small viewports */
-  .table-container {
+.table-container {
     width: 100%;
     overflow-x: auto;
     display: block;
-  }
+}
 
-  /* adjustable table width via CSS variable --table-width (default 100%) */
-  table {
+table {
     border-collapse: collapse;
     width: 100%;
     box-sizing: border-box;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     margin: 0 auto; /* keep table centered when width is less than container */
     max-width: 100%;
-  }
+}
 
-  th, td {
+th, td {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
     user-select: none;
     border: none;        
     border-bottom: 1px solid #ddd;
-  }
+}
 
-  th {
+th {
     background-color: #4285F4;
     color: white;
     font-size: 18px;
@@ -55,96 +62,103 @@
     max-width: 150px;
     cursor: pointer;
     position: relative;
-  }
+}
 
-  .nested-table th {
+.nested-tasks-row {
+    margin-bottom: 10px;
+    border-bottom: 5px solid #ccc;
+}
+
+table.nested-table th {
     background-color: #34A853;
-  }
+    border-bottom: 1px solid #ccc;
+}
 
-  th.sort-asc::after {
+th.sort-asc::after {
     content: " ▲";
     position: absolute;
     right: 8px;
-  }
+}
 
-  th.sort-desc::after {
+th.sort-desc::after {
     content: " ▼";
     position: absolute;
     right: 8px;
-  }
+}
 
-  #toggle-task-column {
+#toggle-task-column {
     cursor: pointer;
     width: 20px;
     text-align: center;
-  }
+}
 
-  .toggle-btn-cell {
+.toggle-btn-cell {
     width: 10px;
     text-align: center;
     margin: 0;
     padding: 0;
-  }
-  
-  .nested-table {
-    margin-top: 10px;
-  }
+}
 
-  .editable {
+table.nested-table {
+    margin-top: 10px;
+    margin-bottom: 40px;
+}
+
+.editable {
     max-width: 150px;
     cursor: pointer;
-  }
+}
 
-  .editable input, .editable select {
+.editable input, .editable select {
     width: 100%;
     box-sizing: border-box;
     border: none;
     padding: 6px;
     font-family: inherit;
     font-size: inherit;
-  }
+}
 
-  .hidden {
+.hidden {
     display: none;
-  }
+}
 
-  .section {
+.section {
     margin-top: 20px;
-  }
+}
 
-  .section h2 {
+.section h2 {
     margin-bottom: 10px;
-  }
+}
 
-  .toggle-btn {
+.toggle-btn {
     padding: 4px 8px;
     cursor: pointer;
-  }
+}
 
-  .add-task-btn {
+.add-task-btn {
     margin-top: 5px;
     padding: 4px 8px;
-  }
+}
 
-  .actions-cell {
+.actions-cell {
     width: 80px;
     text-align: center;
     margin: 0;
     padding: 0;
-  }
-  
-  tbody tr:nth-child(4n + 1) {
-    background-color: #cbdef3;
-  }
+}
 
-  .nested-table tbody tr:nth-child(2n + 1) {
+tbody tr:nth-child(4n + 1) {
+    background-color: #cbdef3;
+}
+
+.nested-table tbody tr:nth-child(2n + 1) {
     background-color: #cbf2f3;
-  }
+}
 
-  .nested-table .task-filter-row td {
+.nested-table .task-filter-row td {
     background-color: white;
-  }
+}
 
-  #holdCloseSection .table-container tr:nth-child(2n + 1), #doneSection .table-container tr:nth-child(2n + 1) {
+#holdCloseSection .table-container tr:nth-child(2n + 1), #doneSection .table-container tr:nth-child(2n + 1) {
     background-color: #cbdef3;
-  }
+}

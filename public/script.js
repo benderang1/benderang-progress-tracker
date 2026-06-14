@@ -1,69 +1,135 @@
-// Initial data
-  const defaultData = [
-    {
-      id: 1,
-      projectName: "Project A",
-      client: "Client X",
-      personInCharge: "John Doe",
-      startDate: "2026-06-01",
-      endDate: "2026-12-31",
-      progress: 50,
-      ongoingActions: "Review Design",
-      status: "On-going",
-      pastDueTasks: 2,
-      tasks: [
-        {
-          id: 1,
-          task: "Task 1",
-          startDate: "2026-06-01",
-          dueDate: "2026-06-15",
-          status: "On-going",
-          pic: "Jane Smith",
-          comments: "Initial draft completed"
-        },
-        {
-          id: 2,
-          task: "Task 2",
-          startDate: "2026-06-16",
-          dueDate: "2026-06-30",
-          status: "Hold/Close",
-          pic: "John Doe",
-          comments: "Waiting for approval"
-        }
-      ]
-    },
-    {
-      id: 2,
-      projectName: "Project B",
-      client: "Client Y",
-      personInCharge: "Alice Johnson",
-      startDate: "2026-05-15",
-      endDate: "2026-11-30",
-      progress: 75,
-      ongoingActions: "Testing",
-      status: "Done",
-      pastDueTasks: 0,
-      tasks: [
-        {
-          id: 1,
-          task: "Task 1",
-          startDate: "2026-05-15",
-          dueDate: "2026-06-15",
-          status: "Done",
-          pic: "Alice Johnson",
-          comments: "Completed successfully"
-        }
-      ]
-    }
-  ];
+  const authResponse =
+      await fetch("/me");
 
-  // Load or initialize projects data
-  let projects = JSON.parse(localStorage.getItem("projectsData")) || defaultData;
+  if (!authResponse.ok) {
 
-  // Save projects to localStorage
-  function saveData() {
-    localStorage.setItem("projectsData", JSON.stringify(projects));
+      location.href =
+          "/login.html";
+
   }
+
+  // Load or initialize projects data from local storage
+  // let projects = JSON.parse(localStorage.getItem("projectsData")) || defaultData;
+
+  const projectsResponse =
+      await fetch("/projects");
+
+  let projects =
+      await projectsResponse.json();
+
+  console.log("Loaded projects data:", projects);
+
+  // Save projects to database
+  async function saveProject(project) {
+
+    const response =
+        await fetch(
+            `/projects/${project.id}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body:
+                    JSON.stringify(project)
+            }
+        );
+    
+    if (!response.ok) {
+
+        throw new Error(
+            "Failed to save project"
+        );
+
+    }
+
+
+
+}
+
+  async function saveTask(task) {
+
+      const response =
+          await fetch(
+              `/tasks/${task.id}`,
+              {
+                  method: "PUT",
+                  headers: {
+                      "Content-Type":
+                          "application/json"
+                  },
+                  body:
+                      JSON.stringify(task)
+              }
+          );
+
+      if (!response.ok) {
+
+          throw new Error(
+              "Failed to save task"
+          );
+
+      }
+
+  }
+
+  async function createProject(project) {
+
+      const response =
+          await fetch(
+              "/projects",
+              {
+                  method: "POST",
+                  headers: {
+                      "Content-Type":
+                          "application/json"
+                  },
+                  body:
+                      JSON.stringify(project)
+              }
+          );
+
+      if (!response.ok) {
+
+          throw new Error(
+              "Failed to create project"
+          );
+
+      }
+
+      return await response.json();
+  }
+
+async function createTask(
+    projectId,
+    task
+) {
+
+    const response =
+        await fetch(
+            `/projects/${projectId}/tasks`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body:
+                    JSON.stringify(task)
+            }
+        );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Failed to create task"
+        );
+
+    }
+
+    return await response.json();
+}
 
   // Utility: Create editable cell with input/select depending on column
   function createEditableCell(rowData, key, isTask = false, projectId = null, taskId = null) {
@@ -111,29 +177,52 @@
       td.appendChild(input);
       input.focus();
 
-      function saveEdit() {
+    async function saveEdit() {
+
         let newValue = input.value;
+
         if (key === "progress" || key === "pastDueTasks") {
-          newValue = parseInt(newValue) || 0;
+            newValue = parseInt(newValue) || 0;
         }
+
+        const oldValue = rowData[key];
+
         rowData[key] = newValue;
 
-        // If status changed, move project/task to correct section
-        if (key === "status") {
-          if (isTask) {
-            // Update task status and re-render tasks for this project
-            updateTaskStatus(projectId, taskId, newValue);
-          } else {
-            // Update project status and re-render all tables
-            updateProjectStatus(projectId, newValue);
-          }
+        try {
+
+            if (isTask) {
+                await saveTask(rowData);
+            }
+            else {
+                await saveProject(rowData);
+            }
+
+        }
+        catch (err) {
+
+            rowData[key] = oldValue;
+
+            console.error(err);
+
+            alert(
+                isTask
+                    ? "Failed to save task"
+                    : "Failed to save project"
+            );
+
+            return;
         }
 
         td.textContent = newValue;
-        saveData();
-        if (!isTask) renderAllTables();
-        else renderTasksForProject(projectId);
-      }
+
+        if (!isTask) {
+            renderAllTables();
+        }
+        else {
+            renderTasksForProject(projectId);
+        }
+    }
 
       input.addEventListener("blur", saveEdit);
       input.addEventListener("keydown", e => {
@@ -177,8 +266,9 @@
     tr.appendChild(createEditableCell(project, "endDate", false, project.id));
     tr.appendChild(createEditableCell(project, "progress", false, project.id));
     tr.appendChild(createEditableCell(project, "ongoingActions", false, project.id));
-    tr.appendChild(createEditableCell(project, "status", false, project.id));
     tr.appendChild(createEditableCell(project, "pastDueTasks", false, project.id));
+    tr.appendChild(createEditableCell(project, "status", false, project.id));
+    
 
     // Toggle button cell
     const toggleTd = document.createElement("td");
@@ -190,6 +280,18 @@
     toggleTd.appendChild(toggleBtn);
     tr.appendChild(toggleTd);
 
+    // Delete Project cell
+    const actionsTd = document.createElement("td");
+    actionsTd.classList.add("actions-cell");
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "Delete";
+    delBtn.style.padding = "4px 8px";
+    delBtn.addEventListener("click", () => {
+      deleteProject(project.id);
+    });
+    actionsTd.appendChild(delBtn);
+    tr.appendChild(actionsTd);
+
     return tr;
   }
 
@@ -200,7 +302,7 @@
     tr.dataset.projectId = project.id;
 
     const td = document.createElement("td");
-    td.colSpan = 10;
+    td.colSpan = 11;
 
     // Create nested tasks table with sorting and filtering
     const nestedTable = document.createElement("table");
@@ -215,7 +317,7 @@
     const filterTd = document.createElement("td");
     filterTd.colSpan = 7;
     filterTd.innerHTML = `
-      <label>Filter Tasks by Status:</label>
+      <label>Filter Tasks of <b>${project.projectName}</b> by Status:</label>
       <select class="task-status-filter">
         <option value="all">All</option>
         <option value="On-going">On-going</option>
@@ -229,7 +331,7 @@
     thead.appendChild(filterRow);
 
     const headerRow = document.createElement("tr");
-    ["No.", "Tasks", "Start Date", "Due Date", "Status", "PIC", "Comments/Notes", "Actions"].forEach(col => {
+    ["No.", "Tasks", "PIC", "Start Date", "Due Date", "Progress (%)", "Comments", "Status", "Actions"].forEach(col => {
       const th = document.createElement("th");
       th.textContent = col;
       th.style.cursor = "pointer";
@@ -362,11 +464,12 @@
       tr.appendChild(numberTd);
 
       tr.appendChild(createEditableCell(task, "task", true, project.id, task.id));
+      tr.appendChild(createEditableCell(task, "pic", true, project.id, task.id));
       tr.appendChild(createEditableCell(task, "startDate", true, project.id, task.id));
       tr.appendChild(createEditableCell(task, "dueDate", true, project.id, task.id));
-      tr.appendChild(createEditableCell(task, "status", true, project.id, task.id));
-      tr.appendChild(createEditableCell(task, "pic", true, project.id, task.id));
       tr.appendChild(createEditableCell(task, "comments", true, project.id, task.id));
+      tr.appendChild(createEditableCell(task, "percentage", true, project.id, task.id));
+      tr.appendChild(createEditableCell(task, "status", true, project.id, task.id));
 
       // Actions cell (optional: add delete task button)
       const actionsTd = document.createElement("td");
@@ -385,71 +488,159 @@
   }
 
   // Delete task by id
-  function deleteTask(projectId, taskId) {
+  async function deleteTask(projectId, taskId) {
+    let userChoice = confirm("Are you sure you want to delete this task?");
+    if (!userChoice) return;
+
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
-    project.tasks = project.tasks.filter(t => t.id !== taskId);
-    saveData();
+    await fetch(
+    `/tasks/${taskId}`,
+    {
+        method: "DELETE"
+    }
+    );
+
+    project.tasks =
+        project.tasks.filter(
+            t =>
+                t.id !== taskId
+        );
     renderAllTables();
     showNestedTable(projectId);
   }
 
   // Delete project by id
-  function deleteProject(projectId) {
-    projects = projects.filter(p => p.id !== projectId);
-    saveData();
+  async function deleteProject(projectId) {
+    let userChoice = confirm("Are you sure you want to delete this project and all its tasks?");
+    if (!userChoice) return;
+
+    await fetch(
+    `/projects/${projectId}`,
+    {
+        method: "DELETE"
+    }
+    );
+
+    projects =
+      projects.filter(
+          p =>
+              p.id !== projectId
+      );
     renderAllTables();
   }
 
   // Add new task to project
-  function addNewTask(projectId) {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
-    const newId = project.tasks.length ? Math.max(...project.tasks.map(t => t.id)) + 1 : 1;
-    project.tasks.push({
-      id: newId,
-      task: "New Task",
-      startDate: "",
-      dueDate: "",
-      status: "On-going",
-      pic: "",
-      comments: ""
-    });
-    saveData();
-    renderAllTables();
-    // Automatically show nested tasks if hidden
-    showNestedTable(projectId);
-  }
+  async function addNewTask(
+      projectId
+  ) {
 
-    // Delete project by id
-  function deleteProject(projectId) {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
-    projects = projects.filter(p => p.id !== projectId);
-    saveData();
-    renderAllTables();
-    showNestedTable(projectId);
+      const project =
+          projects.find(
+              p =>
+                  p.id === projectId
+          );
+
+      if (!project) {
+          return;
+      }
+
+      const newTask = {
+
+          task: "New Task",
+          pic: "",
+          startDate: "",
+          dueDate: "",
+          comments: "",
+          status: "On-going"
+
+      };
+
+      try {
+
+          const result =
+              await createTask(
+                  projectId,
+                  newTask
+              );
+
+          newTask.id =
+              result.id;
+
+          project.tasks.push(
+              newTask
+          );
+
+          renderAllTables();
+
+          showNestedTable(
+              projectId
+          );
+
+      }
+      catch(err) {
+
+          console.error(err);
+
+          alert(
+              "Failed to create task"
+          );
+
+      }
+
   }
 
   // Add new project
-  document.getElementById("addProjectBtn").addEventListener("click", () => {
-    const newId = projects.length ? Math.max(...projects.map(p => p.id)) + 1 : 1;
-    projects.push({
-      id: newId,
-      projectName: "New Project",
-      client: "",
-      personInCharge: "",
-      startDate: "",
-      endDate: "",
-      progress: 0,
-      ongoingActions: "",
-      status: "On-going",
-      pastDueTasks: 0,
-      tasks: []
-    });
-    saveData();
-    renderAllTables();
-  });
+  document.getElementById("addProjectBtn").addEventListener(
+      "click",
+      async () => {
+
+          const newProject = {
+
+              projectName: "New Project",
+              client: "",
+              personInCharge: "",
+              startDate: "",
+              endDate: "",
+              progress: 0,
+              ongoingActions: "",
+              pastDueTasks: 0,
+              status: "On-going"
+
+          };
+
+          try {
+
+              const result =
+                  await createProject(
+                      newProject
+                  );
+
+              newProject.id =
+                  result.id;
+
+              newProject.tasks =
+                  [];
+
+              projects.push(
+                  newProject
+              );
+
+              renderAllTables();
+
+          }
+          catch(err) {
+
+              console.error(err);
+
+              alert(
+                  "Failed to create project"
+              );
+
+          }
+
+      }
+  );
 
   // Toggle nested tasks visibility
   function toggleNestedTable(projectId, btn) {
@@ -519,3 +710,5 @@
 
   // Initial render
   renderAllTables();
+
+  

@@ -15,7 +15,6 @@
 <input type="text" id="filterInput" placeholder="Type to filter projects..." />
 
 
-
 <!-- Sections for projects -->
 <div class="section" id="onGoingSection">
   <h2>On-going Projects</h2>
@@ -26,14 +25,15 @@
       <tr>
         <th data-key="projectName">Project Name</th>
         <th data-key="client">Client</th>
-        <th data-key="personInCharge">Person In Charge</th>
+        <th data-key="personInCharge">PIC</th>
         <th data-key="startDate">Start Date</th>
         <th data-key="endDate">End Date</th>
         <th data-key="progress">Progress (%)</th>
         <th data-key="ongoingActions">Ongoing Actions</th>
+        <th data-key="overdueTasks">Overdue Tasks</th>
         <th data-key="status">Status</th>
-        <th data-key="pastDueTasks">Past Due Tasks</th>
         <th id="toggle-task-column">Tasks</th>
+        <th id="delete-project-column">Action</th>
       </tr>
     </thead>
     <tbody>
@@ -51,14 +51,15 @@
       <tr>
         <th>Project Name</th>
         <th>Client</th>
-        <th>Person In Charge</th>
+        <th>PIC</th>
         <th>Start Date</th>
         <th>End Date</th>
         <th>Progress (%)</th>
         <th>Ongoing Actions</th>
+        <th>Overdue Tasks</th>
         <th>Status</th>
-        <th>Past Due Tasks</th>
         <th>Tasks</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
@@ -76,14 +77,15 @@
       <tr>
         <th>Project Name</th>
         <th>Client</th>
-        <th>Person In Charge</th>
+        <th>PIC</th>
         <th>Start Date</th>
         <th>End Date</th>
         <th>Progress (%)</th>
         <th>Ongoing Actions</th>
+        <th>Overdue Tasks</th>
         <th>Status</th>
-        <th>Past Due Tasks</th>
         <th>Tasks</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
@@ -93,7 +95,11 @@
   </div>
 </div>
 
-<script src="script.js"></script>
+<script type="module" src="script.js"></script>
+
+<footer>
+  <p>&copy; 2026 Benderang Progress Tracker. All rights reserved.</p>
+</footer>
 
 </body>
 </html>
