@@ -1,0 +1,150 @@
+  html {
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    align-items: stretch;
+    width: 90%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  h1, h2 {
+    margin-bottom: 10px;
+  }
+
+  input[type="text"], select, button {
+    padding: 5px;
+    margin: 5px 10px 15px 0;
+  }
+
+  /* container that centers tables and allows horizontal scrolling on small viewports */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+  }
+
+  /* adjustable table width via CSS variable --table-width (default 100%) */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin: 0 auto; /* keep table centered when width is less than container */
+    max-width: 100%;
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    user-select: none;
+    border: none;        
+    border-bottom: 1px solid #ddd;
+  }
+
+  th {
+    background-color: #4285F4;
+    color: white;
+    font-size: 18px;
+    padding: 10px;
+    max-width: 150px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .nested-table th {
+    background-color: #34A853;
+  }
+
+  th.sort-asc::after {
+    content: " ▲";
+    position: absolute;
+    right: 8px;
+  }
+
+  th.sort-desc::after {
+    content: " ▼";
+    position: absolute;
+    right: 8px;
+  }
+
+  #toggle-task-column {
+    cursor: pointer;
+    width: 20px;
+    text-align: center;
+  }
+
+  .toggle-btn-cell {
+    width: 10px;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .nested-table {
+    margin-top: 10px;
+  }
+
+  .editable {
+    max-width: 150px;
+    cursor: pointer;
+  }
+
+  .editable input, .editable select {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    padding: 6px;
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .section {
+    margin-top: 20px;
+  }
+
+  .section h2 {
+    margin-bottom: 10px;
+  }
+
+  .toggle-btn {
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+
+  .add-task-btn {
+    margin-top: 5px;
+    padding: 4px 8px;
+  }
+
+  .actions-cell {
+    width: 80px;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+  
+  tbody tr:nth-child(4n + 1) {
+    background-color: #cbdef3;
+  }
+
+  .nested-table tbody tr:nth-child(2n + 1) {
+    background-color: #cbf2f3;
+  }
+
+  .nested-table .task-filter-row td {
+    background-color: white;
+  }
+
+  #holdCloseSection .table-container tr:nth-child(2n + 1), #doneSection .table-container tr:nth-child(2n + 1) {
+    background-color: #cbdef3;
+  }
