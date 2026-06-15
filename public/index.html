@@ -18,12 +18,11 @@
 <!-- Sections for projects -->
 <div class="section" id="onGoingSection">
   <h2>On-going Projects</h2>
-  <button id="addProjectBtn" class="add-project-btn">Add New Project</button>
+  <button id="addProjectBtn">Add New Project</button>
   <div class="table-container">
   <table id="onGoingTable">
     <thead>
       <tr>
-        <th id="toggle-task-column"></th>
         <th data-key="projectName">Project Name</th>
         <th data-key="client">Client</th>
         <th data-key="personInCharge">PIC</th>
@@ -31,9 +30,10 @@
         <th data-key="endDate">End Date</th>
         <th data-key="progress">Progress (%)</th>
         <th data-key="ongoingActions">Ongoing Actions</th>
-        <th data-key="pastDueTasks">Overdue Tasks</th>
+        <th data-key="overdueTasks">Overdue Tasks</th>
         <th data-key="status">Status</th>
-        <th id="delete-project-column">Delete</th>
+        <th id="toggle-task-column">Tasks</th>
+        <th id="delete-project-column">Action</th>
       </tr>
     </thead>
     <tbody>
@@ -49,7 +49,6 @@
   <table id="doneTable">
     <thead>
       <tr>
-        <th></th>
         <th>Project Name</th>
         <th>Client</th>
         <th>PIC</th>
@@ -59,7 +58,8 @@
         <th>Ongoing Actions</th>
         <th>Overdue Tasks</th>
         <th>Status</th>
-        <th>Delete</th>
+        <th>Tasks</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
@@ -75,7 +75,6 @@
   <table id="holdCloseTable">
     <thead>
       <tr>
-        <th>Tasks</th>
         <th>Project Name</th>
         <th>Client</th>
         <th>PIC</th>
@@ -85,7 +84,8 @@
         <th>Ongoing Actions</th>
         <th>Overdue Tasks</th>
         <th>Status</th>
-        <th>Delete</th>
+        <th>Tasks</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>

@@ -258,16 +258,6 @@ async function createTask(
     const tr = document.createElement("tr");
     tr.dataset.projectId = project.id;
 
-    // Toggle button cell
-    const toggleTd = document.createElement("td");
-    const toggleBtn = document.createElement("button");
-    toggleBtn.textContent = "▸";
-    toggleBtn.classList.add("toggle-btn");
-    toggleBtn.addEventListener("click", () => toggleNestedTable(project.id, toggleBtn));
-    toggleTd.classList.add("toggle-btn-cell");
-    toggleTd.appendChild(toggleBtn);
-    tr.appendChild(toggleTd);
-
     // Create editable cells for project columns
     tr.appendChild(createEditableCell(project, "projectName", false, project.id));
     tr.appendChild(createEditableCell(project, "client", false, project.id));
@@ -280,19 +270,27 @@ async function createTask(
     tr.appendChild(createEditableCell(project, "status", false, project.id));
     
 
+    // Toggle button cell
+    const toggleTd = document.createElement("td");
+    const toggleBtn = document.createElement("button");
+    toggleBtn.textContent = "▼";
+    toggleBtn.classList.add("toggle-btn");
+    toggleBtn.addEventListener("click", () => toggleNestedTable(project.id, toggleBtn));
+    toggleTd.classList.add("toggle-btn-cell");
+    toggleTd.appendChild(toggleBtn);
+    tr.appendChild(toggleTd);
+
     // Delete Project cell
     const actionsTd = document.createElement("td");
     actionsTd.classList.add("actions-cell");
     const delBtn = document.createElement("button");
-    delBtn.textContent = "🗑";
-    delBtn.classList.add("delete-btn");
+    delBtn.textContent = "Delete";
+    delBtn.style.padding = "4px 8px";
     delBtn.addEventListener("click", () => {
       deleteProject(project.id);
     });
     actionsTd.appendChild(delBtn);
     tr.appendChild(actionsTd);
-
-    tr.classList.add("project-row");
 
     return tr;
   }
@@ -319,7 +317,6 @@ async function createTask(
     const filterTd = document.createElement("td");
     filterTd.colSpan = 7;
     filterTd.innerHTML = `
-      <div class="filter-add-task-section">
       <label>Filter Tasks of <b>${project.projectName}</b> by Status:</label>
       <select class="task-status-filter">
         <option value="all">All</option>
@@ -327,15 +324,14 @@ async function createTask(
         <option value="Hold/Close">Hold/Close</option>
         <option value="Done">Done</option>
       </select>
-      <input type="text" class="task-text-filter" placeholder="Filter tasks by name or PIC..."/>
-      <button class="add-task-btn">+ Add Task</button>
-      </div>
+      <input type="text" class="task-text-filter" placeholder="Filter tasks by name or PIC..." style="width: 300px; margin-left: 10px;" />
+      <button class="add-task-btn">Add Task</button>
     `;
     filterRow.appendChild(filterTd);
     thead.appendChild(filterRow);
 
     const headerRow = document.createElement("tr");
-    ["No.", "Tasks", "PIC", "Start Date", "Due Date", "Progress (%)", "Comments", "Status", "Delete"].forEach(col => {
+    ["No.", "Tasks", "PIC", "Start Date", "Due Date", "Progress (%)", "Comments", "Status", "Actions"].forEach(col => {
       const th = document.createElement("th");
       th.textContent = col;
       th.style.cursor = "pointer";
@@ -479,8 +475,8 @@ async function createTask(
       const actionsTd = document.createElement("td");
       actionsTd.classList.add("actions-cell");
       const delBtn = document.createElement("button");
-      delBtn.textContent = "🗑";
-      delBtn.classList.add("delete-btn");
+      delBtn.textContent = "Delete";
+      delBtn.style.padding = "4px 8px";
       delBtn.addEventListener("click", () => {
         deleteTask(project.id, task.id);
       });
@@ -652,10 +648,10 @@ async function createTask(
     if (!nestedRow) return;
     if (nestedRow.classList.contains("hidden")) {
       nestedRow.classList.remove("hidden");
-      btn.textContent = "▾";
+      btn.textContent = "▲";
     } else {
       nestedRow.classList.add("hidden");
-      btn.textContent = "▸";
+      btn.textContent = "▼";
     }
   }
 
@@ -665,7 +661,7 @@ async function createTask(
     if (!nestedRow) return;
     nestedRow.classList.remove("hidden");
     const toggleBtn = document.querySelector(`tr[data-project-id='${projectId}'] button.toggle-btn`);
-    if (toggleBtn) toggleBtn.textContent = "▾";
+    if (toggleBtn) toggleBtn.textContent = "▲";
   }
 
 
@@ -715,18 +711,4 @@ async function createTask(
   // Initial render
   renderAllTables();
 
-
-  // Amount Count
-  const totalProjects = projects.length;
-
-  const totalTasks =
-      projects.reduce(
-          (sum, p) => sum + p.tasks.length,
-          0
-      );
-
-  const overdueTasks =
-      projects.reduce(
-          (sum, p) => sum + p.pastDueTasks,
-          0
-      );
+  
