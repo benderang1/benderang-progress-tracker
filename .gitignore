@@ -4,3 +4,4 @@ benderang1
 benderang1.pub
 create-admin.js
 database/init-db.js
+generate-hash.js
