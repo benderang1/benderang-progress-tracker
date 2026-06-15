@@ -50,7 +50,8 @@ app.get(
         }
 
         res.json({
-            loggedIn: true
+            loggedIn: true,
+            username: req.session.username
         });
     }
 );
@@ -144,6 +145,7 @@ app.post("/login", (req, res) => {
             }
 
             req.session.userId = user.id;
+            req.session.username = user.username;
 
             res.json({
                 success: true

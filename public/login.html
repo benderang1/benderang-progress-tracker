@@ -4,19 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Benderang Progress Tracker</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="src/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="login.css">
 </head>
 
 <body>
 
-<form id="loginForm">
-    <input id="username" placeholder="Username">
-    <input id="password" type="password" placeholder="Password">
-
-    <button type="submit">
-        Login
-    </button>
-</form>
+    <div id="loginCardContainer">
+        <div class="welcome-word">
+            <img src="src/favicon.png" alt="benderang-logo">
+            <h2 class="login-word">Benderang Progress Tracker</h2>
+            <p class="sign-in-sentence">Sign in to continue</p>
+        </div>
+        <form id="loginForm">
+            <div class="ask-username">
+                <label>Username</label>
+                <input id="username" placeholder="Username">
+            </div>
+            <div class="ask-password">
+                <label>Password</label>
+                <input id="password" type="password" placeholder="Password">
+            </div>
+            <button type="submit" class="login-btn">Login</button>
+        </form>
+    </div>
 
 
 <script src="login.js"></script>

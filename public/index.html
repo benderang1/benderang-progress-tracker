@@ -4,14 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Benderang Progress Tracker</title>
+    <link rel="icon" href="src/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
 
     <header>
-      <h1>Benderang Progress Tracker</h1>
+      <div id="benderangLogo">
+        <image src="src/favicon.png" alt="benderang-logo">
+        <h1>Benderang Progress Tracker</h1>
+      </div>
       <div class="log-stuff">
-        <p>Logged in as</p>
+        <p>Logged in as <span id="currentUser"></span></p>  
         <button id="logout-btn">Logout</button>
       </div>
     </header>
@@ -36,9 +40,9 @@
               <th data-key="client">Client</th>
               <th data-key="personInCharge">PIC</th>
               <th data-key="startDate">Start Date</th>
-              <th data-key="endDate">End Date</th>
-              <th data-key="progress">Progress</th>
-              <th data-key="ongoingActions">Ongoing Actions</th>
+              <th data-key="endDate">Due Date</th>
+              <th data-key="progress">Project Progress</th>
+              <th data-key="ongoingActions">Current Actions</th>
               <th data-key="pastDueTasks">Overdue Tasks</th>
               <th data-key="status">Status</th>
               <th id="delete-project-column">Delete</th>
@@ -52,7 +56,7 @@
       </div>
 
       <div class="section" id="doneSection">
-        <h2>Done Projects</h2>
+        <h2>Finished Projects</h2>
         <div class="table-container">
         <table id="doneTable">
           <thead>
@@ -62,9 +66,9 @@
               <th>Client</th>
               <th>PIC</th>
               <th>Start Date</th>
-              <th>End Date</th>
+              <th>Due Date</th>
               <th>Progress</th>
-              <th>Ongoing Actions</th>
+              <th>Current Actions</th>
               <th>Overdue Tasks</th>
               <th>Status</th>
               <th>Delete</th>
@@ -78,7 +82,7 @@
       </div>
 
       <div class="section" id="holdCloseSection">
-        <h2>Hold/Close Projects</h2>
+        <h2>Hold/Closed Projects</h2>
         <div class="table-container">
         <table id="holdCloseTable">
           <thead>
@@ -88,9 +92,9 @@
               <th>Client</th>
               <th>PIC</th>
               <th>Start Date</th>
-              <th>End Date</th>
+              <th>Due Date</th>
               <th>Progress</th>
-              <th>Ongoing Actions</th>
+              <th>Current Actions</th>
               <th>Overdue Tasks</th>
               <th>Status</th>
               <th>Delete</th>

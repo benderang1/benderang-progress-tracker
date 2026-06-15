@@ -1,6 +1,11 @@
   const authResponse =
       await fetch("/me");
 
+  const authData =
+    await authResponse.json();
+
+console.log(authData.username);
+
   if (!authResponse.ok) {
 
       location.href =
@@ -131,6 +136,14 @@ async function createTask(
     return await response.json();
 }
 
+  function formatDate(dateStr) {
+    const [y, m, d] = dateStr.split("-");
+    const months = ["Jan","Feb","Mar","Apr","May","Jun",
+                    "Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${d} ${months[+m - 1]} ${y}`;
+  }
+  
+
   // Utility: Create editable cell with input/select depending on column
   function createEditableCell(rowData, key, isTask = false, projectId = null, taskId = null) {
     const td = document.createElement("td");
@@ -180,7 +193,9 @@ async function createTask(
             </div>
         `;
     } else {
-        td.textContent = rowData[key] || "";
+        td.textContent = (key === "startDate" || key === "endDate" || key === "dueDate") && rowData[key]
+          ? formatDate(rowData[key])
+          : rowData[key] || "";
     }
 
     td.addEventListener("click", () => {
@@ -228,7 +243,9 @@ async function createTask(
             return;
         }
 
-        td.textContent = newValue;
+        td.textContent = (key === "startDate" || key === "endDate" || key === "dueDate") && newValue
+            ? formatDate(newValue)
+            : newValue;
 
         if (!isTask) {
             renderAllTables();
@@ -350,7 +367,7 @@ async function createTask(
     thead.appendChild(filterRow);
 
     const headerRow = document.createElement("tr");
-    ["No.", "Tasks", "PIC", "Start Date", "Due Date", "Progress", "Comments", "Status", "Delete"].forEach(col => {
+    ["No.", "Tasks", "Assigned To", "Issued Date", "Due Date", "Task Progress", "Comments", "Status", "Delete"].forEach(col => {
       const th = document.createElement("th");
       th.textContent = col;
       th.style.cursor = "pointer";
@@ -694,7 +711,7 @@ async function createTask(
 
     // Get project filters
     const filterText = document.getElementById("filterInput").value.trim().toLowerCase();
-
+    
     // Filter projects by category and text
     let filteredProjects = projects.filter(p => {
 
@@ -730,6 +747,45 @@ async function createTask(
 
   // Initial render
   renderAllTables();
+
+
+  document
+    .getElementById("currentUser")
+    .textContent =
+        authData.username;
+
+  document
+    .getElementById("logout-btn")
+    .addEventListener(
+        "click",
+        async () => {
+
+            const confirmed =
+                confirm(
+                    "Are you sure you want to logout?"
+                );
+
+            if (!confirmed) {
+                return;
+            }
+
+            const response =
+                await fetch(
+                    "/logout",
+                    {
+                        method: "POST"
+                    }
+                );
+
+            if (response.ok) {
+
+                location.href =
+                    "/login.html";
+
+            }
+
+        }
+    );
 
 
   // Amount Count
