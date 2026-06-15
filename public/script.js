@@ -4,8 +4,6 @@
   const authData =
     await authResponse.json();
 
-console.log(authData.username);
-
   if (!authResponse.ok) {
 
       location.href =
@@ -749,11 +747,14 @@ async function createTask(
   renderAllTables();
 
 
+  // Logged in account display
   document
     .getElementById("currentUser")
     .textContent =
-        authData.username;
+        `${authData.username}(${authData.role})`;
 
+
+  // Log out button logic
   document
     .getElementById("logout-btn")
     .addEventListener(
