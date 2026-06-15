@@ -36,8 +36,9 @@ db.serialize(() => {
             pic TEXT,
             startDate TEXT,
             dueDate TEXT,
-            status TEXT,
+            progress INTEGER,
             comments TEXT,
+            status TEXT,
 
             FOREIGN KEY (project_id)
                 REFERENCES projects(id)

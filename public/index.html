@@ -1,105 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Benderang Progress Tracker</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Benderang Progress Tracker</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
 
-<h1>Benderang Progress Tracker</h1>
+    <header>
+      <h1>Benderang Progress Tracker</h1>
+      <div class="log-stuff">
+        <p>Logged in as</p>
+        <button id="logout-btn">Logout</button>
+      </div>
+    </header>
+    
+    <div class="tracker-dashboard">
+      <div class="search-and-new-project">
+        <input type="text" id="filterInput" placeholder="Search Projects by Name or Client..." />
+        <button id="addProjectBtn" class="add-project-btn">+ Add Project</button>
+      </div>
+    </div>
 
-<!-- Filters for projects -->
-<label for="filterInput">Filter Projects by Name or Client:</label>
-<input type="text" id="filterInput" placeholder="Type to filter projects..." />
+    <!-- Sections for projects -->
+    <div class="tables-section">
+      <div class="section" id="onGoingSection">
+        <h2>On-going Projects</h2>   
+        <div class="table-container">
+        <table id="onGoingTable">
+          <thead>
+            <tr>
+              <th id="toggle-task-column"></th>
+              <th data-key="projectName">Project Name</th>
+              <th data-key="client">Client</th>
+              <th data-key="personInCharge">PIC</th>
+              <th data-key="startDate">Start Date</th>
+              <th data-key="endDate">End Date</th>
+              <th data-key="progress">Progress</th>
+              <th data-key="ongoingActions">Ongoing Actions</th>
+              <th data-key="pastDueTasks">Overdue Tasks</th>
+              <th data-key="status">Status</th>
+              <th id="delete-project-column">Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Project rows go here -->
+          </tbody>
+        </table>
+        </div>
+      </div>
 
+      <div class="section" id="doneSection">
+        <h2>Done Projects</h2>
+        <div class="table-container">
+        <table id="doneTable">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Project Name</th>
+              <th>Client</th>
+              <th>PIC</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Progress</th>
+              <th>Ongoing Actions</th>
+              <th>Overdue Tasks</th>
+              <th>Status</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Done projects -->
+          </tbody>
+        </table>
+        </div>
+      </div>
 
-<!-- Sections for projects -->
-<div class="section" id="onGoingSection">
-  <h2>On-going Projects</h2>
-  <button id="addProjectBtn" class="add-project-btn">Add New Project</button>
-  <div class="table-container">
-  <table id="onGoingTable">
-    <thead>
-      <tr>
-        <th id="toggle-task-column"></th>
-        <th data-key="projectName">Project Name</th>
-        <th data-key="client">Client</th>
-        <th data-key="personInCharge">PIC</th>
-        <th data-key="startDate">Start Date</th>
-        <th data-key="endDate">End Date</th>
-        <th data-key="progress">Progress (%)</th>
-        <th data-key="ongoingActions">Ongoing Actions</th>
-        <th data-key="pastDueTasks">Overdue Tasks</th>
-        <th data-key="status">Status</th>
-        <th id="delete-project-column">Delete</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Project rows go here -->
-    </tbody>
-  </table>
-  </div>
-</div>
+      <div class="section" id="holdCloseSection">
+        <h2>Hold/Close Projects</h2>
+        <div class="table-container">
+        <table id="holdCloseTable">
+          <thead>
+            <tr>
+              <th>Tasks</th>
+              <th>Project Name</th>
+              <th>Client</th>
+              <th>PIC</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Progress</th>
+              <th>Ongoing Actions</th>
+              <th>Overdue Tasks</th>
+              <th>Status</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Hold/Close projects -->
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
 
-<div class="section" id="doneSection">
-  <h2>Done Projects</h2>
-  <div class="table-container">
-  <table id="doneTable">
-    <thead>
-      <tr>
-        <th></th>
-        <th>Project Name</th>
-        <th>Client</th>
-        <th>PIC</th>
-        <th>Start Date</th>
-        <th>End Date</th>
-        <th>Progress (%)</th>
-        <th>Ongoing Actions</th>
-        <th>Overdue Tasks</th>
-        <th>Status</th>
-        <th>Delete</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Done projects -->
-    </tbody>
-  </table>
-  </div>
-</div>
+    <script type="module" src="script.js"></script>
 
-<div class="section" id="holdCloseSection">
-  <h2>Hold/Close Projects</h2>
-  <div class="table-container">
-  <table id="holdCloseTable">
-    <thead>
-      <tr>
-        <th>Tasks</th>
-        <th>Project Name</th>
-        <th>Client</th>
-        <th>PIC</th>
-        <th>Start Date</th>
-        <th>End Date</th>
-        <th>Progress (%)</th>
-        <th>Ongoing Actions</th>
-        <th>Overdue Tasks</th>
-        <th>Status</th>
-        <th>Delete</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Hold/Close projects -->
-    </tbody>
-  </table>
-  </div>
-</div>
+    <footer>
+      <p>&copy; 2026 Benderang Progress Tracker. All rights reserved.</p>
+    </footer>
 
-<script type="module" src="script.js"></script>
-
-<footer>
-  <p>&copy; 2026 Benderang Progress Tracker. All rights reserved.</p>
-</footer>
-
-</body>
+  </body>
 </html>

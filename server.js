@@ -248,11 +248,12 @@ app.post(
                 pic,
                 startDate,
                 dueDate,
+                progress,
                 comments,
                 status
             )
             VALUES
-            (?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
                 req.params.id,
@@ -260,6 +261,7 @@ app.post(
                 task.pic,
                 task.startDate,
                 task.dueDate,
+                task.progress,
                 task.comments,
                 task.status
             ],
@@ -368,6 +370,7 @@ app.put(
                 pic = ?,
                 startDate = ?,
                 dueDate = ?,
+                progress = ?,
                 comments = ?,
                 status = ?
             WHERE id = ?
@@ -377,6 +380,7 @@ app.put(
                 task.pic,
                 task.startDate,
                 task.dueDate,
+                task.progress,
                 task.comments,
                 task.status,
                 taskId

@@ -9,10 +9,61 @@ body {
     align-items: stretch;
     background: #f8fafc;
     font-family: "Inter", sans-serif;
-    width: 90%;
+    width: 100%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
+}
+
+header {
+    top: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background-color: rgb(255, 255, 255);
+    width: 100%;
+    height: fit-content;
+    max-height: 80px;
+    z-index: 1;
+    border-bottom: 1px solid rgb(240, 240, 240);
+    padding: 10px clamp(5px, 10vw, 60px);
+    box-sizing: border-box;
+}
+
+.log-stuff {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.tables-section {
+    align-items: stretch;
+    background: #f8fafc;
+    font-family: "Inter", sans-serif;
+    width: 95%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.tracker-dashboard {
+    background: #f8fafc;
+    width: 92.5%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 5px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.search-and-new-project {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
 }
 
 button {
@@ -57,6 +108,35 @@ input {
     transition: background-color 0.2s ease;
 }
 
+.progress-container {
+    position: relative;
+    width: 100%;
+    min-width: 80px;
+    height: 22px;
+
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #22c55e;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-50%, -50%);
+
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .project-row:hover {
     background-color: #dbeafe;
 }
@@ -66,7 +146,12 @@ input {
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 24px;
+    margin-top: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+#filterInput {
+    width: 300px;
 }
 
 .filter-add-task-section {
@@ -80,15 +165,15 @@ input {
     align-self: center;
 }
 
+.task-text-filter {
+    width: 250px;
+}
+
 footer {
     text-align: center;
     padding: 10px 0;
     margin-top: 20px;
     color: #777;
-}
-
-h1, h2 {
-    margin-bottom: 10px;
 }
 
 .table-container {
@@ -192,14 +277,6 @@ th.sort-desc::after {
 
 .hidden {
     display: none;
-}
-
-.section {
-    margin-top: 20px;
-}
-
-.section h2 {
-    margin-bottom: 10px;
 }
 
 .toggle-btn {

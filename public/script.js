@@ -139,7 +139,7 @@ async function createTask(
     function createInput(value) {
       if (key === "status") {
         const select = document.createElement("select");
-        const options = isTask ? ["Done", "On-going", "Hold/Close"] : ["On-going", "Hold/Close", "Done"];
+        const options = ["🟢 On-going", "🔴 Hold", "🔵 Done"];
         options.forEach(opt => {
           const option = document.createElement("option");
           option.value = opt;
@@ -167,7 +167,21 @@ async function createTask(
       }
     }
 
-    td.textContent = rowData[key] || "";
+    if (key === "progress") {
+        td.innerHTML = `
+            <div class="progress-container">
+                <div
+                    class="progress-fill"
+                    style="width:${rowData[key]}%">
+                </div>
+                <div class="progress-text">
+                    ${rowData[key]}%
+                </div>
+            </div>
+        `;
+    } else {
+        td.textContent = rowData[key] || "";
+    }
 
     td.addEventListener("click", () => {
       if (td.querySelector("input") || td.querySelector("select")) return; // already editing
@@ -220,7 +234,8 @@ async function createTask(
             renderAllTables();
         }
         else {
-            renderTasksForProject(projectId);
+            renderAllTables();
+            showNestedTable(projectId);
         }
     }
 
@@ -323,9 +338,9 @@ async function createTask(
       <label>Filter Tasks of <b>${project.projectName}</b> by Status:</label>
       <select class="task-status-filter">
         <option value="all">All</option>
-        <option value="On-going">On-going</option>
-        <option value="Hold/Close">Hold/Close</option>
-        <option value="Done">Done</option>
+        <option value="🟢 On-going">On-going</option>
+        <option value="🔴 Hold">Hold</option>
+        <option value="🔵 Done">Done</option>
       </select>
       <input type="text" class="task-text-filter" placeholder="Filter tasks by name or PIC..."/>
       <button class="add-task-btn">+ Add Task</button>
@@ -335,7 +350,7 @@ async function createTask(
     thead.appendChild(filterRow);
 
     const headerRow = document.createElement("tr");
-    ["No.", "Tasks", "PIC", "Start Date", "Due Date", "Progress (%)", "Comments", "Status", "Delete"].forEach(col => {
+    ["No.", "Tasks", "PIC", "Start Date", "Due Date", "Progress", "Comments", "Status", "Delete"].forEach(col => {
       const th = document.createElement("th");
       th.textContent = col;
       th.style.cursor = "pointer";
@@ -426,8 +441,8 @@ async function createTask(
     let filteredTasks = project.tasks.filter(task => {
       // Filter by status
       if (filters.statusFilter !== "all") {
-        if (filters.statusFilter === "Hold/Close") {
-          if (task.status !== "Hold/Close") return false;
+        if (filters.statusFilter === "🔴 Hold") {
+          if (task.status !== "🔴 Hold") return false;
         } else if (task.status !== filters.statusFilter) return false;
       }
       // Filter by text in task name or PIC
@@ -471,8 +486,8 @@ async function createTask(
       tr.appendChild(createEditableCell(task, "pic", true, project.id, task.id));
       tr.appendChild(createEditableCell(task, "startDate", true, project.id, task.id));
       tr.appendChild(createEditableCell(task, "dueDate", true, project.id, task.id));
+      tr.appendChild(createEditableCell(task, "progress", true, project.id, task.id));
       tr.appendChild(createEditableCell(task, "comments", true, project.id, task.id));
-      tr.appendChild(createEditableCell(task, "percentage", true, project.id, task.id));
       tr.appendChild(createEditableCell(task, "status", true, project.id, task.id));
 
       // Actions cell (optional: add delete task button)
@@ -555,8 +570,9 @@ async function createTask(
           pic: "",
           startDate: "",
           dueDate: "",
+          progress: 0,
           comments: "",
-          status: "On-going"
+          status: "🟢 On-going",
 
       };
 
@@ -609,7 +625,7 @@ async function createTask(
               progress: 0,
               ongoingActions: "",
               pastDueTasks: 0,
-              status: "On-going"
+              status: "🟢 On-going"
 
           };
 
@@ -698,12 +714,12 @@ async function createTask(
       const projectRow = createProjectRow(project);
       const nestedRow = createNestedTasksRow(project);
 
-      if (project.status === "On-going") {
+      if (project.status === "🟢 On-going") {
         document.querySelector("#onGoingTable tbody").appendChild(projectRow);
         document.querySelector("#onGoingTable tbody").appendChild(nestedRow);
-      } else if (project.status === "Done") {
+      } else if (project.status === "🔵 Done") {
         document.querySelector("#doneTable tbody").appendChild(projectRow);
-      } else if (project.status === "Hold/Close") {
+      } else if (project.status === "🔴 Hold") {
         document.querySelector("#holdCloseTable tbody").appendChild(projectRow);
       }
     });
