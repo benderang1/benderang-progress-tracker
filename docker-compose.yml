@@ -1,0 +1,12 @@
+version: "3"
+services:
+  tracker:
+    build: .
+    ports:
+      - "5050:5050"
+    volumes:
+      - ./database:/app/database
+      - ./credentials.json:/app/credentials.json
+      - ./token.json:/app/token.json
+      - ./.env:/app/.env
+    restart: always

@@ -20,8 +20,6 @@
   let projects =
       await projectsResponse.json();
 
-  console.log("Loaded projects data:", projects);
-
   // Save projects to database
   async function saveProject(project) {
 
@@ -882,3 +880,31 @@ async function createTask(
 
         }
     );
+  
+  // Export calendar button
+  document
+    .getElementById("exportCalendarBtn")
+    .addEventListener("click", async () => {
+
+        const btn = document.getElementById("exportCalendarBtn");
+        btn.disabled = true;
+        btn.textContent = "Syncing...";
+
+        try {
+            const response = await fetch("/export-calendar", { method: "POST" });
+            const result = await response.json();
+
+            if (result.success) {
+                alert(`Synced ${result.synced} tasks to Google Calendar!`);
+            } else {
+                alert("Sync failed: " + result.error);
+            }
+        }
+        catch (err) {
+            alert("Error: " + err.message);
+        }
+        finally {
+            btn.disabled = false;
+            btn.textContent = "▦ Export to Google Calendar";
+        }
+    });
