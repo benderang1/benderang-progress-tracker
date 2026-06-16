@@ -1,7 +1,17 @@
-node_modules/
+# Environment
 .env
-benderang1
-benderang1.pub
+
+# Google OAuth credentials (sensitive)
+credentials.json
+token.json
+
+# Database
+database/
+
+# Dependencies
+node_modules/
+
+# Utility scripts (not needed in production)
 create-admin.js
-database/init-db.js
 generate-hash.js
+insert-data.js
