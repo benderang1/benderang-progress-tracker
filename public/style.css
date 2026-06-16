@@ -179,6 +179,7 @@ button:active {
 .export-xlsx-btn:hover, 
 .import-xlsx-btn:hover, 
 .create-calendar-btn:hover,
+.create-mom-btn:hover,
 #logout-btn:hover {
     background: rgb(226, 226, 226);
 }
