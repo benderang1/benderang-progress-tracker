@@ -7,8 +7,6 @@ const bcrypt = require("bcrypt");
 const sqlite3 = require("sqlite3").verbose();
 const calendar = require("./calendar");
 
-console.log("Calendar loaded successfully");
-
 const app = express();
 
 function requireLogin(
