@@ -65,17 +65,40 @@ header {
 }
 
 /* ── Layout ── */
-.tables-section {
+
+.main-content {
     width: 95%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
+}
+
+.toggle-section-btn {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+    font-size: 18px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.toggle-section-btn:hover {
+    background: #e2e8f0;
+}
+
+.tables-section {
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
     padding-bottom: 40px;
+    align-items: stretch;
 }
 
 .tracker-dashboard {
     background: #ffffff;
-    width: 95%;
+    width: 100%;
     margin: 20px auto 0;
     display: flex;
     flex-direction: row;
@@ -126,6 +149,14 @@ header {
     color:#d41d1d;
 }
 
+.admin-section {
+    position: relative;
+    top: 20px;
+    right: 50px;
+    align-self: center;
+    width: 50px;
+}
+
 /* ── Buttons ── */
 button {
     border: none;
@@ -136,6 +167,27 @@ button {
     font-size: 0.875rem;
     font-weight: 500;
     transition: background 0.15s, transform 0.1s;
+}
+
+.toggle-section-btn {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 20px;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.toggle-section-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
 }
 
 button:active {
@@ -184,6 +236,11 @@ button:active {
     background: rgb(226, 226, 226);
 }
 
+#logsBtn {
+    display: none;
+    width: 150px;
+}
+
 /* ── Inputs & Selects ── */
 input, select {
     padding: 8px 10px;
@@ -214,10 +271,11 @@ input::placeholder {
 .section {
     background: white;
     border-radius: 12px;
-    padding: 20px;
+    padding: 5px 20px;
     margin-top: 20px;
     margin-bottom: 4px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    width: 100%;
 }
 
 .section h2 {
@@ -455,4 +513,165 @@ footer {
 #holdCloseSection .table-container tr:nth-child(2n + 1),
 #doneSection .table-container tr:nth-child(2n + 1) {
     background-color: #eff6ff;
+}
+
+@media (max-width: 768px) {
+
+    /* Header */
+    header {
+        padding: 0 16px;
+        height: auto;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    #benderangLogo h1 {
+        font-size: 1rem;
+    }
+
+    #benderangLogo img {
+        width: 36px;
+        height: 36px;
+    }
+
+    .log-stuff {
+        font-size: 0.75rem;
+        gap: 8px;
+    }
+
+    #currentUser {
+        font-size: 13px;
+    }
+
+    /* Dashboard toolbar */
+    .tracker-dashboard {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .search-and-new-project {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    #filterInput {
+        width: 100%;
+    }
+
+    .add-project-btn {
+        width: 100%;
+    }
+
+    #functionalityBtn {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    #functionalityBtn button {
+        width: 100%;
+    }
+
+    /* Main content */
+    .main-content {
+        width: 100%;
+        padding: 0 12px;
+    }
+
+    .tables-section {
+        width: 100%;
+    }
+
+    /* Section cards */
+    .section {
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    .section h2 {
+        font-size: 1rem;
+    }
+
+    /* Tables scroll horizontally */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    th, td {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        white-space: nowrap;
+    }
+
+    /* Nested table */
+    .nested-table {
+        margin: 4px 0 8px 8px;
+    }
+
+    .filter-add-task-section {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .task-text-filter {
+        width: 100%;
+    }
+
+    /* Logs page */
+    .logs-container {
+        padding: 12px;
+    }
+
+    td {
+        white-space: normal; /* ← allow wrapping */
+        word-break: break-word;
+    }
+
+    th {
+        white-space: nowrap; /* ← keep headers on one line */
+    }
+
+    /* Nested table header */
+    table.nested-table th {
+        font-size: 0.7rem;
+        padding: 6px 8px;
+    }
+
+    /* Filter row text */
+    .filter-add-task-section label {
+        font-size: 0.8rem;
+    }
+
+    .task-status-filter,
+    .task-text-filter {
+        font-size: 0.8rem;
+        padding: 6px 8px;
+    }
+
+    .add-task-btn {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    #benderangLogo h1 {
+        display: none; /* hide title on very small screens, logo stays */
+    }
+
+    .log-stuff span#currentUser {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    th, td {
+        font-size: 0.75rem;
+        padding: 5px 8px;
+    }
 }

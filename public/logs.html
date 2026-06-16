@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Activity Logs - Benderang Project Tracker</title>
+    <link rel="icon" href="src/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .action-CREATE { color: #16a34a; font-weight: 700; }
+        .action-UPDATE { color: #2563eb; font-weight: 700; }
+        .action-DELETE { color: #ef4444; font-weight: 700; }
+
+        .entity-project { 
+            background: #eff6ff; 
+            color: #2563eb;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .entity-task {
+            background: #f0fdf4;
+            color: #16a34a;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+            font-size: 0.875rem;
+        }
+
+        .back-btn:hover {
+            background: #e2e8f0;
+        }
+
+        .logs-status {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .tables-section {
+            width: 95%;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div id="benderangLogo">
+            <img src=src/favicon.png alt="Benderang Logo">
+            <h1>Benderang Project Tracker</h1>
+        </div>
+        <div class="log-stuff">
+            <span class="logs-status" id="lastRefreshed"></span>
+            <span id="currentUser"></span>
+            <button id="logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <div class="tables-section">
+        <div class="section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="back-btn" onclick="location.href='/index.html'">← Back</button>
+                    <h2 style="margin:0;">Activity Logs</h2>
+                </div>
+                <input type="text" id="logsFilter" placeholder="Filter by user, action, or name..." style="width:300px;">
+            </div>
+
+            <div class="table-container">
+                <table id="logsTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Type</th>
+                            <th>Name</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Benderang Project Tracker. All rights reserved.</p>
+    </footer>
+
+    <script src="logs.js"></script>
+</body>
+</html>

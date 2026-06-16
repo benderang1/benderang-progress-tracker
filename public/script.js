@@ -11,6 +11,10 @@
 
   }
 
+  if (authData.role === "engineering admin") {
+      document.getElementById("logsBtn").style.display = "inline-block";
+  }
+
   // Load or initialize projects data from local storage
   // let projects = JSON.parse(localStorage.getItem("projectsData")) || defaultData;
 
@@ -908,3 +912,28 @@ async function createTask(
             btn.textContent = "▦ Export to Google Calendar";
         }
     });
+
+  // Handle Log Page Button
+  document
+    .getElementById("logsBtn")
+    .addEventListener("click", () => {
+        location.href = "/logs.html";
+    });
+
+  // Handle Table Collapse Buttom
+  document.querySelectorAll(".toggle-section-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+          const targetId = btn.dataset.target;
+          const container = document.getElementById(targetId);
+          const isHidden = container.classList.toggle("hidden");
+          btn.textContent = isHidden ? "▸" : "▾";
+      });
+
+      // Collapse done and hold by default, leave on-going open
+        const targetId = btn.dataset.target;
+        if (targetId === "doneTableContainer" || targetId === "holdCloseTableContainer") {
+            document.getElementById(targetId).classList.add("hidden");
+            btn.textContent = "▸";
+        }
+  });
+

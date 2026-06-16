@@ -71,6 +71,7 @@ h2, p {
     flex-direction: column;
     gap: 6px;
     text-align: left;
+    position: relative;
 }
 
 .ask-username label,
@@ -135,12 +136,6 @@ footer {
     font-size: 0.8rem;
 }
 
-
-.ask-password {
-    position: relative;
-    display: inline-block;
-}
-
 .ask-password input {
     padding-right: 40px;
 }
@@ -148,7 +143,7 @@ footer {
 .eye-btn {
     position: absolute;
     right: 10px;
-    top: 80%;
+    top: 50px;
     transform: translateY(-50%);
     border: none;
     background: transparent;
@@ -162,4 +157,13 @@ footer {
     height: 20px;
     display: block;
     filter: invert(40%) brightness(100%);
+}
+
+@media (max-width: 480px) {
+    #loginCardContainer {
+        margin-top: 60px;
+        padding: 28px 24px;
+        border-radius: 12px;
+        width: 90%;
+    }
 }

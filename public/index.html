@@ -19,7 +19,7 @@
         <button id="logout-btn">Logout</button>
       </div>
     </header>
-    
+    <div class="main-content">
     <div class="tracker-dashboard">
       <div class="search-and-new-project">
         <input type="text" id="filterInput" placeholder="Search Projects by Name or Client..." />
@@ -34,16 +34,19 @@
     </div>
 
     <!-- Sections for projects -->
-    <div class="tables-section">
-      <div class="section" id="onGoingSection">
+    <div class="section" id="onGoingSection">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <button class="toggle-section-btn" data-target="onGoingTableContainer">▾</button>
         <div class="on-going-word">
-          <h2>On-going Projects</h2>
-          <div class="the-number">
-            <p class="dot-number-ongoing">●</p><p id="onGoingNumber"></p><p>items</p>
-          </div>
+            <h2>On-going Projects</h2>
+            <div class="the-number">
+                <p class="dot-number-ongoing">●</p><p id="onGoingNumber"></p><p>items</p>
+            </div>
         </div>
+    </div>
+    <div id="onGoingTableContainer">
         <div class="table-container">
-        <table id="onGoingTable">
+            <table id="onGoingTable">
           <thead>
             <tr>
               <th id="toggle-task-column"></th>
@@ -62,17 +65,22 @@
           <tbody>
             <!-- Project rows go here -->
           </tbody>
-        </table>
+            </table>
         </div>
-      </div>
+    </div>
+</div>
 
       <div class="section" id="doneSection">
-         <div class="finished-word">
-          <h2>Finished Projects</h2>
-          <div class="the-number">
-            <p class="dot-number-finished">●</p><p id="doneNumber"></p><p>items</p>
-          </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <button class="toggle-section-btn" data-target="doneTableContainer">▾</button>
+        <div class="finished-word">
+            <h2>Finished Projects</h2>
+            <div class="the-number">
+                <p class="dot-number-finished">●</p><p id="doneNumber"></p><p>items</p>
+            </div>
         </div>
+    </div>
+    <div id="doneTableContainer">
         <div class="table-container">
         <table id="doneTable">
           <thead>
@@ -93,17 +101,22 @@
           <tbody>
             <!-- Done projects -->
           </tbody>
-        </table>
+          </table>
         </div>
-      </div>
+    </div>
+</div>
 
       <div class="section" id="holdCloseSection">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <button class="toggle-section-btn" data-target="holdCloseTableContainer">▾</button>
         <div class="hold-word">
-          <h2>Hold/Closed Projects</h2>
-          <div class="the-number">
-            <p class="dot-number-hold">●</p><p id="holdNumber"></p><p>items</p>
-          </div>
+            <h2>Hold/Closed Projects</h2>
+            <div class="the-number">
+                <p class="dot-number-hold">●</p><p id="holdNumber"></p><p>items</p>
+            </div>
         </div>
+    </div>
+    <div id="holdCloseTableContainer">
         <div class="table-container">
         <table id="holdCloseTable">
           <thead>
@@ -126,10 +139,15 @@
           </tbody>
         </table>
         </div>
-      </div>
     </div>
+</div>
+</div>
 
     <script type="module" src="script.js"></script>
+
+    <div class="admin-section">
+      <button id="logsBtn" class="log-btn">Log Page</button>
+    </div>
 
     <footer>
       <p>&copy; 2026 Benderang Project Tracker. All rights reserved.</p>

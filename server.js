@@ -27,6 +27,27 @@ function requireLogin(
     next();
 }
 
+function writeLog(db, username, action, entityType, entityId, entityName, details = "") {
+    db.run(
+        `INSERT INTO logs (username, action, entityType, entityId, entityName, details)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [username, action, entityType, entityId, entityName, details],
+        (err) => {
+            if (err) console.error("Log write failed:", err.message);
+        }
+    );
+}
+
+function requireAdmin(req, res, next) {
+    if (!req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+    if (req.session.role !== "engineering admin") {
+        return res.status(403).json({ error: "Access denied" });
+    }
+    next();
+}
+
 app.use(express.json());
 
 app.use(
@@ -131,6 +152,22 @@ function abbreviateClient(str) {
     }
     return str;
 }
+
+app.get(
+    "/logs",
+    requireAdmin,
+    (req, res) => {
+        const db = new sqlite3.Database("./database/tracker.db");
+        db.all(
+            "SELECT * FROM logs ORDER BY timestamp DESC LIMIT 200",
+            [],
+            (err, rows) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json(rows);
+            }
+        );
+    }
+);
 
 app.get(
     "/export-excel",
@@ -698,6 +735,7 @@ app.post(
                 res.json({
                     id: this.lastID
                 });
+                writeLog(db, req.session.username, "CREATE", "project", this.lastID, p.projectName);
 
             }
         );
@@ -758,6 +796,7 @@ app.post(
                 res.json({
                     id: this.lastID
                 });
+                writeLog(db, req.session.username, "CREATE", "task", this.lastID, task.task);
 
             }
         );
@@ -820,6 +859,7 @@ app.put(
                 res.json({
                     success: true
                 });
+                writeLog(db, req.session.username, "UPDATE", "project", projectId, project.projectName);
 
             }
         );
@@ -878,6 +918,7 @@ app.put(
                 res.json({
                     success: true
                 });
+                writeLog(db, req.session.username, "UPDATE", "task", taskId, task.task);
 
             }
         );
@@ -915,6 +956,7 @@ app.delete(
                 res.json({
                     success: true
                 });
+                writeLog(db, req.session.username, "DELETE", "project", req.params.id, "");
 
             }
         );
@@ -952,6 +994,7 @@ app.delete(
                 res.json({
                     success: true
                 });
+                writeLog(db, req.session.username, "DELETE", "task", req.params.id, "");
 
             }
         );
