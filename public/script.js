@@ -148,19 +148,19 @@ async function createTask(
   const onGoingProjects =
         projects.filter(
             p =>
-                p.status === "🟢 On-going"
+                p.status === "On-going"
         );
 
   const finishedProjects =
         projects.filter(
             p =>
-                p.status === "🔵 Done"
+                p.status === "Done"
         );
 
   const holdProjects =
         projects.filter(
             p =>
-                p.status === "🔴 Hold"
+                p.status === "Hold"
         );
 
   const totalTasks =
@@ -195,7 +195,7 @@ async function createTask(
     function createInput(value) {
       if (key === "status") {
         const select = document.createElement("select");
-        const options = ["🟢 On-going", "🔴 Hold", "🔵 Done"];
+        const options = ["On-going", "Hold", "Done"];
         options.forEach(opt => {
           const option = document.createElement("option");
           option.value = opt;
@@ -398,9 +398,9 @@ async function createTask(
       <label>Filter Tasks of <b>${project.projectName}</b> by Status:</label>
       <select class="task-status-filter">
         <option value="all">All</option>
-        <option value="🟢 On-going">On-going</option>
-        <option value="🔴 Hold">Hold</option>
-        <option value="🔵 Done">Done</option>
+        <option value="On-going">On-going</option>
+        <option value="Hold">Hold</option>
+        <option value="Done">Done</option>
       </select>
       <input type="text" class="task-text-filter" placeholder="Filter tasks by name or PIC..."/>
       <button class="add-task-btn">+ Add Task</button>
@@ -667,7 +667,7 @@ async function createTask(
           dueDate: "",
           progress: 0,
           comments: "",
-          status: "🟢 On-going",
+          status: "On-going",
 
       };
 
@@ -720,7 +720,7 @@ async function createTask(
               progress: 0,
               ongoingActions: "",
               pastDueTasks: 0,
-              status: "🟢 On-going"
+              status: "On-going"
 
           };
 
@@ -809,12 +809,12 @@ async function createTask(
       const projectRow = createProjectRow(project);
       const nestedRow = createNestedTasksRow(project);
 
-      if (project.status === "🟢 On-going") {
+      if (project.status === "On-going") {
         document.querySelector("#onGoingTable tbody").appendChild(projectRow);
         document.querySelector("#onGoingTable tbody").appendChild(nestedRow);
-      } else if (project.status === "🔵 Done") {
+      } else if (project.status === "Done") {
         document.querySelector("#doneTable tbody").appendChild(projectRow);
-      } else if (project.status === "🔴 Hold") {
+      } else if (project.status === "Hold") {
         document.querySelector("#holdCloseTable tbody").appendChild(projectRow);
       }
     });
