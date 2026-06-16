@@ -5,9 +5,6 @@ const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
 const sqlite3 = require("sqlite3").verbose();
-const calendar = require("./calendar");
-
-console.log("Calendar loaded successfully");
 
 const app = express();
 
@@ -33,11 +30,7 @@ app.use(
     session({
         secret: process.env.SESSION_SECRET,
         resave: false,
-        saveUninitialized: false,
-
-        cookie: {
-            maxAge: 6 * 60 * 60 * 1000 // max 6 hours per session, log out automatically after 6 hours
-        }
+        saveUninitialized: false
     })
 );
 
@@ -64,6 +57,19 @@ app.get(
         });
     }
 );
+
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+
+        cookie: {
+            maxAge: 6 * 60 * 60 * 1000 // max 6 hours per session, log out automatically after 6 hours
+        }
+    })
+);
+
 
 app.get(
     "/projects",
@@ -123,14 +129,6 @@ app.get(
 
     }
 );
-
-function abbreviateClient(str) {
-    const words = str.trim().split(" ");
-    if (words.length > 1 || str.length > 10) {
-        return words.map(word => word[0]).join("").toUpperCase();
-    }
-    return str;
-}
 
 app.get(
     "/export-excel",
@@ -286,9 +284,11 @@ app.get(
                         projects.forEach(
                             (project, index) => {
 
-                                let sheetName = `${abbreviateClient(project.client)} - ${project.projectName}`;
-                                    
-                                sheetName = sheetName
+                                let sheetName =
+                                    `${index + 1} - ${project.projectName}`;
+
+                                sheetName =
+                                    sheetName
                                         .replace(/[\\\/\*\?\:\[\]]/g, "")
                                         .substring(0, 31);
 
@@ -439,157 +439,6 @@ app.get(
 
     }
 );
-
-async function batchProcess(tasks, db, batchSize = 5) {
-    
-    const picEmailMap = {
-        "LRB": "luhung.benderang@gmail.com",
-        "AOJ": "alwi.benderang@gmail.com",
-        "DH": "doni.benderang@gmail.com",
-        "LM": "leonardo.benderang@gmail.com",
-        "RS": "admbenderang@gmail.com",
-        "PK": "praderm77@benderang.com",
-        "MT": "marshel.benderang@gmail.com",
-        "FM": "flora.benderang@gmail.com",
-    };
-
-    
-    for (let i = 0; i < tasks.length; i += batchSize) {
-        const batch = tasks.slice(i, i + batchSize);
-        await Promise.all(
-            batch.map(async (task) => {
-
-                const attendees = task.pic
-                    .split(",")
-                    .map(name => name.trim())
-                    .filter(name => picEmailMap[name])
-                    .map(name => ({ email: picEmailMap[name] }));
-
-                // Always include the main calendar
-                attendees.push({ email: "admengineering.benderang@gmail.com" });
-
-                const eventBody = {
-                    summary: `[${task.client} - ${task.projectName}] ${task.task}`,
-                    description: `Notes: ${task.comments || ""}`,
-                    start: {
-                        dateTime: `${task.dueDate}T09:00:00`,
-                        timeZone: "Asia/Jakarta"
-                    },
-                    end: {
-                        dateTime: `${task.dueDate}T09:30:00`,
-                        timeZone: "Asia/Jakarta"
-                    },
-                    reminders: {
-                        useDefault: false,
-                        overrides: [
-                            { method: "popup", minutes: 1 * 24 * 60 },
-                            { method: "popup", minutes: 2 * 24 * 60 },
-                            { method: "popup", minutes: 3 * 24 * 60 }
-                        ]
-                    },
-                    attendees: attendees
-                };
-
-                if (task.eventId) {
-                    try {
-                        await calendar.events.update({
-                            calendarId: "admengineering.benderang@gmail.com",
-                            eventId: task.eventId,
-                            requestBody: eventBody
-                        });
-                    }
-                    catch (updateErr) {
-                        if (updateErr.code === 404) {
-                            const created = await calendar.events.insert({
-                                calendarId: "admengineering.benderang@gmail.com",
-                                requestBody: eventBody
-                            });
-                            await new Promise((resolve, reject) => {
-                                db.run(
-                                    "UPDATE tasks SET eventId = ? WHERE id = ?",
-                                    [created.data.id, task.id],
-                                    (err) => err ? reject(err) : resolve()
-                                );
-                            });
-                        }
-                        else {
-                            throw updateErr;
-                        }
-                    }
-                }
-                else {
-                    const created = await calendar.events.insert({
-                        calendarId: "admengineering.benderang@gmail.com",
-                        requestBody: eventBody
-                    });
-                    await new Promise((resolve, reject) => {
-                        db.run(
-                            "UPDATE tasks SET eventId = ? WHERE id = ?",
-                            [created.data.id, task.id],
-                            (err) => err ? reject(err) : resolve()
-                        );
-                    });
-                }
-
-            })
-        );
-
-        // Small delay between batches to avoid rate limit
-        if (i + batchSize < tasks.length) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-    }
-}
-
-app.post(
-    "/export-calendar",
-    requireLogin,
-    async (req, res) => {
-        try {
-            const db = new sqlite3.Database("./database/tracker.db");
-
-            const tasks = await new Promise((resolve, reject) => {
-                db.all(
-                    `
-                    SELECT
-                        tasks.*,
-                        projects.projectName,
-                        projects.client
-                    FROM tasks
-                    JOIN projects
-                        ON tasks.project_id = projects.id
-                    WHERE
-                        tasks.status <> 'Done'
-                        AND tasks.dueDate <> ''
-                        AND tasks.dueDate >= date('now')
-                    `,
-                    [],
-                    (err, rows) => {
-                        if (err) reject(err);
-                        else resolve(rows);
-                    }
-                );
-            });
-
-            console.log(`Syncing ${tasks.length} tasks to Google Calendar...`);
-
-            await batchProcess(tasks, db);
-
-            db.close();
-            console.log("Calendar sync complete.");
-
-            res.json({
-                success: true,
-                synced: tasks.length
-            });
-        }
-        catch (err) {
-            console.error(err);
-            res.status(500).json({ error: err.message });
-        }
-    }
-);
-
 
 
 app.post("/login", (req, res) => {
