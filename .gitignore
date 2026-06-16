@@ -4,4 +4,8 @@ benderang1
 benderang1.pub
 create-admin.js
 database/init-db.js
+
+# Utility scripts (not needed in production)
+create-admin.js
 generate-hash.js
+insert-data.js
