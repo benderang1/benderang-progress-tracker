@@ -140,7 +140,52 @@ async function createTask(
                     "Jul","Aug","Sep","Oct","Nov","Dec"];
     return `${d} ${months[+m - 1]} ${y}`;
   }
+
+
+  // Count Total Projects and Tasks
+  const totalProjects = projects.length;
   
+  const onGoingProjects =
+        projects.filter(
+            p =>
+                p.status === "🟢 On-going"
+        );
+
+  const finishedProjects =
+        projects.filter(
+            p =>
+                p.status === "🔵 Done"
+        );
+
+  const holdProjects =
+        projects.filter(
+            p =>
+                p.status === "🔴 Hold"
+        );
+
+  const totalTasks =
+      projects.reduce(
+          (sum, p) => sum + p.tasks.length,
+          0
+      );
+
+  const overdueTasks =
+      projects.reduce(
+          (sum, p) => sum + p.pastDueTasks,
+          0
+      );
+
+  // 
+  function refreshProjectNumbers() {
+    let onGoingNumbers = document.getElementById("onGoingNumber");
+    onGoingNumbers.textContent = onGoingProjects.length;
+
+    let doneNumbers = document.getElementById("doneNumber");
+    doneNumbers.textContent = finishedProjects.length;
+
+    let holdNumbers = document.getElementById("holdNumber");
+    holdNumbers.textContent = holdProjects.length;
+  }
 
   // Utility: Create editable cell with input/select depending on column
   function createEditableCell(rowData, key, isTask = false, projectId = null, taskId = null) {
@@ -314,7 +359,7 @@ async function createTask(
     const actionsTd = document.createElement("td");
     actionsTd.classList.add("actions-cell");
     const delBtn = document.createElement("button");
-    delBtn.textContent = "🗑";
+    delBtn.textContent = "✖";
     delBtn.classList.add("delete-btn");
     delBtn.addEventListener("click", () => {
       deleteProject(project.id);
@@ -347,7 +392,7 @@ async function createTask(
     const filterRow = document.createElement("tr");
     filterRow.classList.add("task-filter-row");
     const filterTd = document.createElement("td");
-    filterTd.colSpan = 7;
+    filterTd.colSpan = 11;
     filterTd.innerHTML = `
       <div class="filter-add-task-section">
       <label>Filter Tasks of <b>${project.projectName}</b> by Status:</label>
@@ -365,7 +410,7 @@ async function createTask(
     thead.appendChild(filterRow);
 
     const headerRow = document.createElement("tr");
-    ["No.", "Tasks", "Assigned To", "Issued Date", "Due Date", "Task Progress", "Comments", "Status", "Delete"].forEach(col => {
+    ["No.", "Tasks", "Assigned To", "Issued Date", "Due Date", "Task Progress", "Comments", "Status", ""].forEach(col => {
       const th = document.createElement("th");
       th.textContent = col;
       th.style.cursor = "pointer";
@@ -453,6 +498,7 @@ async function createTask(
   function renderTasks(project, tbody, sortKey, sortDirection, filters) {
     tbody.innerHTML = "";
 
+
     let filteredTasks = project.tasks.filter(task => {
       // Filter by status
       if (filters.statusFilter !== "all") {
@@ -460,6 +506,7 @@ async function createTask(
           if (task.status !== "🔴 Hold") return false;
         } else if (task.status !== filters.statusFilter) return false;
       }
+
       // Filter by text in task name or PIC
       if (filters.textFilter) {
         const text = filters.textFilter;
@@ -469,6 +516,37 @@ async function createTask(
       }
       return true;
     });
+
+    if (filteredTasks.length === 0) {
+
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+
+        td.colSpan = 9; // number of columns in task table
+        td.classList.add("empty-message");
+
+        let message = "";
+
+        if (project.tasks.length === 0) {
+            message = "No tasks available. Click Add Task to create your first task.";
+        }
+        else {
+            message = "No matching tasks found.";
+        }
+
+        td.innerHTML =
+            `
+            <div class="empty-state">
+                ${message}
+            </div>
+            `;
+
+        tr.appendChild(td);
+
+        tbody.appendChild(tr);
+
+        return;
+    }
 
     // Sort tasks
     if (sortKey) {
@@ -509,7 +587,7 @@ async function createTask(
       const actionsTd = document.createElement("td");
       actionsTd.classList.add("actions-cell");
       const delBtn = document.createElement("button");
-      delBtn.textContent = "🗑";
+      delBtn.textContent = "✖";
       delBtn.classList.add("delete-btn");
       delBtn.addEventListener("click", () => {
         deleteTask(project.id, task.id);
@@ -561,6 +639,8 @@ async function createTask(
           p =>
               p.id !== projectId
       );
+      
+    refreshProjectNumbers();
     renderAllTables();
   }
 
@@ -709,7 +789,7 @@ async function createTask(
 
     // Get project filters
     const filterText = document.getElementById("filterInput").value.trim().toLowerCase();
-    
+
     // Filter projects by category and text
     let filteredProjects = projects.filter(p => {
 
@@ -744,6 +824,7 @@ async function createTask(
   document.getElementById("filterInput").addEventListener("input", renderAllTables);
 
   // Initial render
+  refreshProjectNumbers();
   renderAllTables();
 
 
@@ -751,7 +832,7 @@ async function createTask(
   document
     .getElementById("currentUser")
     .textContent =
-        `${authData.username}(${authData.role})`;
+        `${authData.username} · ${authData.role}`;
 
 
   // Log out button logic
@@ -788,18 +869,16 @@ async function createTask(
         }
     );
 
+  // Export to Excel Button Handler
 
-  // Amount Count
-  const totalProjects = projects.length;
+  document
+    .getElementById("exportXLSX")
+    .addEventListener(
+        "click",
+        () => {
 
-  const totalTasks =
-      projects.reduce(
-          (sum, p) => sum + p.tasks.length,
-          0
-      );
+            window.location.href =
+                "/export-excel";
 
-  const overdueTasks =
-      projects.reduce(
-          (sum, p) => sum + p.pastDueTasks,
-          0
-      );
+        }
+    );

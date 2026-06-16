@@ -61,3 +61,39 @@ document
             alert("Login failed");
         }
     });
+
+    const passwordInput =
+    document.getElementById("password");
+
+    const toggleButton =
+        document.getElementById("togglePassword");
+
+    const eyeIcon =
+        document.getElementById("eyeIcon");
+
+    toggleButton.addEventListener(
+        "click",
+        () => {
+
+            if (
+                passwordInput.type ===
+                "password"
+            ) {
+
+                passwordInput.type = "text";
+
+                eyeIcon.src =
+                    "src/hide.png";
+
+            } else {
+
+                passwordInput.type =
+                    "password";
+
+                eyeIcon.src =
+                    "src/visible.png";
+
+            }
+
+        }
+    );

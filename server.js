@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const ExcelJS = require("exceljs");
 const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
@@ -55,6 +56,18 @@ app.get(
             role: req.session.role
         });
     }
+);
+
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+
+        cookie: {
+            maxAge: 6 * 60 * 60 * 1000 // max 6 hours per session, log out automatically after 6 hours
+        }
+    })
 );
 
 
@@ -116,6 +129,317 @@ app.get(
 
     }
 );
+
+app.get(
+    "/export-excel",
+    requireLogin,
+    (req, res) => {
+
+        const db =
+            new sqlite3.Database(
+                "./database/tracker.db"
+            );
+
+        db.all(
+            "SELECT * FROM projects",
+            [],
+            async (err, projects) => {
+
+                if (err) {
+                    return res.status(500).json(err);
+                }
+
+                db.all(
+                    "SELECT * FROM tasks",
+                    [],
+                    async (err, tasks) => {
+
+                        if (err) {
+                            return res.status(500).json(err);
+                        }
+
+                        const workbook =
+                            new ExcelJS.Workbook();
+
+                        //
+                        // PROJECTS SHEET
+                        //
+                        const projectsSheet =
+                            workbook.addWorksheet(
+                                "Projects"
+                            );
+
+                        projectsSheet.columns = [
+                            {
+                                header: "Project Name",
+                                key: "projectName",
+                                width: 30
+                            },
+                            {
+                                header: "Client",
+                                key: "client",
+                                width: 20
+                            },
+                            {
+                                header: "PIC",
+                                key: "personInCharge",
+                                width: 20
+                            },
+                            {
+                                header: "Start Date",
+                                key: "startDate",
+                                width: 15
+                            },
+                            {
+                                header: "Due Date",
+                                key: "endDate",
+                                width: 15
+                            },
+                            {
+                                header: "Project Progress (%)",
+                                key: "progress",
+                                width: 20
+                            },
+                            {
+                                header: "Current Actions",
+                                key: "ongoingActions",
+                                width: 40
+                            },
+                            {
+                                header: "Overdue Tasks",
+                                key: "pastDueTasks",
+                                width: 20
+                            },
+                            {
+                                header: "Status",
+                                key: "status",
+                                width: 20
+                            }
+                        ];
+
+                        projects.forEach(project => {
+
+                            projectsSheet.addRow({
+                                projectName:
+                                    project.projectName,
+                                client:
+                                    project.client,
+                                personInCharge:
+                                    project.personInCharge,
+                                startDate:
+                                    project.startDate,
+                                endDate:
+                                    project.endDate,
+                                progress:
+                                    project.progress,
+                                ongoingActions:
+                                    project.ongoingActions,
+                                pastDueTasks:
+                                    project.pastDueTasks,
+                                status:
+                                    project.status
+                            });
+
+                        });
+
+                        //
+                        // STYLE PROJECT HEADER
+                        //
+                        projectsSheet.getRow(1).eachCell(
+                            cell => {
+
+                                cell.font = {
+                                    bold: true,
+                                    color: {
+                                        argb: "FFFFFFFF"
+                                    }
+                                };
+
+                                cell.fill = {
+                                    type: "pattern",
+                                    pattern: "solid",
+                                    fgColor: {
+                                        argb: "4285F4"
+                                    }
+                                };
+
+                            }
+                        );
+
+                        projectsSheet.views = [
+                            {
+                                state: "frozen",
+                                ySplit: 1
+                            }
+                        ];
+
+                        projectsSheet.autoFilter = {
+                            from: "A1",
+                            to: "I1"
+                        };
+
+                        //
+                        // PROJECT TASK SHEETS
+                        //
+                        projects.forEach(
+                            (project, index) => {
+
+                                let sheetName =
+                                    `${index + 1} - ${project.projectName}`;
+
+                                sheetName =
+                                    sheetName
+                                        .replace(/[\\\/\*\?\:\[\]]/g, "")
+                                        .substring(0, 31);
+
+                                const sheet =
+                                    workbook.addWorksheet(
+                                        sheetName
+                                    );
+
+                                sheet.columns = [
+                                    {
+                                        header: "No.",
+                                        key: "number",
+                                        width: 10
+                                    },
+                                    {
+                                        header: "Tasks",
+                                        key: "task",
+                                        width: 40
+                                    },
+                                    {
+                                        header: "Assigned To",
+                                        key: "pic",
+                                        width: 20
+                                    },
+                                    {
+                                        header: "Issued Date",
+                                        key: "startDate",
+                                        width: 20
+                                    },
+                                    {
+                                        header: "Due Date",
+                                        key: "dueDate",
+                                        width: 20
+                                    },
+                                    {
+                                        header: "Task Progress (%)",
+                                        key: "percentage",
+                                        width: 20
+                                    },
+                                    {
+                                        header: "Comments",
+                                        key: "comments",
+                                        width: 40
+                                    },
+                                    {
+                                        header: "Status",
+                                        key: "status",
+                                        width: 20
+                                    }
+                                ];
+
+                                const projectTasks =
+                                    tasks.filter(
+                                        task =>
+                                            task.project_id === project.id
+                                    );
+
+                                projectTasks.forEach(
+                                    (
+                                        task,
+                                        taskIndex
+                                    ) => {
+
+                                        sheet.addRow({
+                                            number:
+                                                taskIndex + 1,
+                                            task:
+                                                task.task,
+                                            pic:
+                                                task.pic,
+                                            startDate:
+                                                task.startDate,
+                                            dueDate:
+                                                task.dueDate,
+                                            percentage:
+                                                task.percentage || 0,
+                                            comments:
+                                                task.comments,
+                                            status:
+                                                task.status
+                                        });
+
+                                    }
+                                );
+
+                                sheet.getRow(1).eachCell(
+                                    cell => {
+
+                                        cell.font = {
+                                            bold: true,
+                                            color: {
+                                                argb: "FFFFFFFF"
+                                            }
+                                        };
+
+                                        cell.fill = {
+                                            type: "pattern",
+                                            pattern: "solid",
+                                            fgColor: {
+                                                argb: "1FA74A"
+                                            }
+                                        };
+
+                                    }
+                                );
+
+                                sheet.views = [
+                                    {
+                                        state: "frozen",
+                                        ySplit: 1
+                                    }
+                                ];
+
+                                sheet.autoFilter = {
+                                    from: "A1",
+                                    to: "H1"
+                                };
+
+                            }
+                        );
+
+                        //
+                        // DOWNLOAD FILE
+                        //
+                        res.setHeader(
+                            "Content-Type",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        );
+
+                        const filename = `BenderangProjectTracker_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+                        res.setHeader(
+                            "Content-Disposition",
+                            `attachment; filename="${filename}"`
+                        );
+
+                        await workbook.xlsx.write(
+                            res
+                        );
+
+                        res.end();
+
+                    }
+                );
+
+            }
+        );
+
+    }
+);
+
 
 app.post("/login", (req, res) => {
 

@@ -62,7 +62,6 @@ header {
     color: #2051a0;
     font-size: 16px;
     font-weight: 600;
-    text-decoration: underline;
 }
 
 /* ── Layout ── */
@@ -79,10 +78,17 @@ header {
     width: 95%;
     margin: 20px auto 0;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
     border-radius: 12px;
     padding: 16px 20px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+#functionalityBtn {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
 }
 
 .search-and-new-project {
@@ -90,6 +96,34 @@ header {
     flex-direction: row;
     gap: 10px;
     align-items: center;
+}
+
+.on-going-word, .finished-word, .hold-word {
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+}
+
+.the-number {
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    position: relative;
+    bottom: 10px;
+    gap: 4px;
+    font-size: 14px;
+}
+
+.dot-number-ongoing {
+    color:#1dd460;
+}
+
+.dot-number-finished {
+    color:#1d3fd4;
+}
+
+.dot-number-hold {
+    color:#d41d1d;
 }
 
 /* ── Buttons ── */
@@ -131,7 +165,8 @@ button:active {
     background: #fff1f1;
     border: none;
     font-size: 16px;
-    color: #ef4444;
+    font-weight: 500;
+    color: #ec6c6c;
     border-radius: 8px;
     padding: 6px 8px;
     transition: background 0.15s;
@@ -139,6 +174,13 @@ button:active {
 
 .delete-btn:hover {
     background: #fee2e2;
+}
+
+.export-xlsx-btn:hover, 
+.import-xlsx-btn:hover, 
+.create-calendar-btn:hover,
+#logout-btn:hover {
+    background: rgb(226, 226, 226);
 }
 
 /* ── Inputs & Selects ── */
@@ -164,7 +206,7 @@ input::placeholder {
 }
 
 #filterInput {
-    width: 280px;
+    width: 320px;
 }
 
 /* ── Section Cards ── */
@@ -181,7 +223,7 @@ input::placeholder {
     font-size: 1.25rem;
     font-weight: 700;
     color: #1e293b;
-    margin: 0 0 16px 0;
+    margin-bottom: 0px;
 }
 
 /* ── Table ── */
@@ -200,7 +242,7 @@ table {
 }
 
 th, td {
-    padding: 10px 14px;
+    padding: 7px 14px;
     text-align: left;
     user-select: none;
     border-bottom: 1px solid #e2e8f0;
@@ -226,6 +268,22 @@ th:last-child  { border-radius: 0 10px 0 0; }
 
 th.sort-asc::after  { content: " ▲"; position: absolute; right: 8px; }
 th.sort-desc::after { content: " ▼"; position: absolute; right: 8px; }
+
+.empty-message {
+    text-align: center;
+    padding: 40px;
+    background: #fafafa;
+}
+
+.empty-state {
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.empty-state strong {
+    color: #16a34a;
+}
 
 /* ── Row Zebra & Hover ── */
 tbody tr:nth-child(4n + 1):not(.nested-tasks-row) {
@@ -280,7 +338,7 @@ table.nested-table th {
 }
 
 .task-text-filter {
-    width: 220px;
+    width: 320px;
 }
 
 /* ── Progress Bar ── */

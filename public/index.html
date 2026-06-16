@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Benderang Progress Tracker</title>
+    <title>Benderang Project Tracker</title>
     <link rel="icon" href="src/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
   </head>
@@ -12,7 +12,7 @@
     <header>
       <div id="benderangLogo">
         <image src="src/favicon.png" alt="benderang-logo">
-        <h1>Benderang Progress Tracker</h1>
+        <h1>Benderang Project Tracker</h1>
       </div>
       <div class="log-stuff">
         <p>Logged in as <span id="currentUser"></span></p>  
@@ -25,12 +25,22 @@
         <input type="text" id="filterInput" placeholder="Search Projects by Name or Client..." />
         <button id="addProjectBtn" class="add-project-btn">+ Add Project</button>
       </div>
+      <div id="functionalityBtn">  
+        <button id="exportXLSX" class="export-xlsx-btn">➜] Export to Excel</button>
+        <button id="importXLSX" class="import-xlsx-btn">🗐 Import from Excel</button>
+        <button id="createCalendar" class="create-calendar-btn">𝄜 Create Calendar</button>
+      </div>
     </div>
 
     <!-- Sections for projects -->
     <div class="tables-section">
       <div class="section" id="onGoingSection">
-        <h2>On-going Projects</h2>   
+        <div class="on-going-word">
+          <h2>On-going Projects</h2>
+          <div class="the-number">
+            <p class="dot-number-ongoing">●</p><p id="onGoingNumber"></p><p>items</p>
+          </div>
+        </div>
         <div class="table-container">
         <table id="onGoingTable">
           <thead>
@@ -45,7 +55,7 @@
               <th data-key="ongoingActions">Current Actions</th>
               <th data-key="pastDueTasks">Overdue Tasks</th>
               <th data-key="status">Status</th>
-              <th id="delete-project-column">Delete</th>
+              <th id="delete-project-column"></th>
             </tr>
           </thead>
           <tbody>
@@ -56,7 +66,12 @@
       </div>
 
       <div class="section" id="doneSection">
-        <h2>Finished Projects</h2>
+         <div class="finished-word">
+          <h2>Finished Projects</h2>
+          <div class="the-number">
+            <p class="dot-number-finished">●</p><p id="doneNumber"></p><p>items</p>
+          </div>
+        </div>
         <div class="table-container">
         <table id="doneTable">
           <thead>
@@ -67,11 +82,11 @@
               <th>PIC</th>
               <th>Start Date</th>
               <th>Due Date</th>
-              <th>Progress</th>
+              <th>Project Progress</th>
               <th>Current Actions</th>
               <th>Overdue Tasks</th>
               <th>Status</th>
-              <th>Delete</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -82,22 +97,27 @@
       </div>
 
       <div class="section" id="holdCloseSection">
-        <h2>Hold/Closed Projects</h2>
+        <div class="hold-word">
+          <h2>Hold/Closed Projects</h2>
+          <div class="the-number">
+            <p class="dot-number-hold">●</p><p id="holdNumber"></p><p>items</p>
+          </div>
+        </div>
         <div class="table-container">
         <table id="holdCloseTable">
           <thead>
             <tr>
-              <th>Tasks</th>
+              <th></th>
               <th>Project Name</th>
               <th>Client</th>
               <th>PIC</th>
               <th>Start Date</th>
               <th>Due Date</th>
-              <th>Progress</th>
+              <th>Project Progress</th>
               <th>Current Actions</th>
               <th>Overdue Tasks</th>
               <th>Status</th>
-              <th>Delete</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -111,7 +131,7 @@
     <script type="module" src="script.js"></script>
 
     <footer>
-      <p>&copy; 2026 Benderang Progress Tracker. All rights reserved.</p>
+      <p>&copy; 2026 Benderang Project Tracker. All rights reserved.</p>
     </footer>
 
   </body>
