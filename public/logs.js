@@ -77,7 +77,30 @@
 
     document.getElementById("logsFilter").addEventListener("input", renderLogs);
 
+    // Clear log button handler
+    document.getElementById("deleteLogsBtn").addEventListener("click", async () => {
+        const confirmed = confirm("Are you sure you want to delete ALL activity logs? This cannot be undone.");
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch("/logs", { method: "DELETE" });
+            const result = await response.json();
+
+            if (result.success) {
+                alert("All logs cleared.");
+                fetchAndRenderLogs();
+            } else {
+                alert("Failed to clear logs: " + result.error);
+            }
+        }
+        catch (err) {
+            alert("Error: " + err.message);
+        }
+    });
+
     fetchAndRenderLogs();
     setInterval(fetchAndRenderLogs, 10000);
 
 })();
+
+

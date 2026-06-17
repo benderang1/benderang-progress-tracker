@@ -75,7 +75,10 @@
                     <button class="back-btn" onclick="location.href='/index.html'">← Back</button>
                     <h2 style="margin:0;">Activity Logs</h2>
                 </div>
-                <input type="text" id="logsFilter" placeholder="Filter by user, action, or name..." style="width:300px;">
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="logsFilter" placeholder="Filter by user, action, or name..." style="width:300px;">
+                    <button id="deleteLogsBtn" class="delete-btn">🗑 Clear Logs</button>
+                </div>     
             </div>
 
             <div class="table-container">

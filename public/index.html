@@ -1,157 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Character encoding for proper text rendering -->
     <meta charset="UTF-8" />
+    <!-- Responsive viewport for mobile devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Benderang Project Tracker</title>
-    <link rel="icon" href="src/favicon.png" type="image/x-icon">
-    <link rel="stylesheet" href="style.css">
+    <!-- Favicon for browser tab -->
+    <link rel="icon" href="src/favicon.png" type="image/x-icon" />
+    <!-- External stylesheet -->
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-
+    <!-- Header section with logo and user info -->
     <header>
       <div id="benderangLogo">
-        <image src="src/favicon.png" alt="benderang-logo">
+        <!-- Logo image -->
+        <img src="src/favicon.png" alt="benderang-logo" />
         <h1>Benderang Project Tracker</h1>
       </div>
       <div class="log-stuff">
-        <p>Logged in as <span id="currentUser"></span></p>  
+        <!-- Display logged-in user info dynamically -->
+        <p>Logged in as <span id="currentUser"></span></p>
+        <!-- Logout button -->
         <button id="logout-btn">Logout</button>
       </div>
     </header>
-    <div class="main-content">
-    <div class="tracker-dashboard">
-      <div class="search-and-new-project">
-        <input type="text" id="filterInput" placeholder="Search Projects by Name or Client..." />
-        <button id="addProjectBtn" class="add-project-btn">+ Add Project</button>
-      </div>
-      <div id="functionalityBtn">  
-        <button id="exportXLSX" class="export-xlsx-btn">↓ Export to Excel</button>
-        <button id="importXLSX" class="import-xlsx-btn">↑ Import from Excel</button>
-        <button id="exportCalendarBtn" class="create-calendar-btn">▦ Export to Google Calendar</button>
-        <button id="createMOMBtn" class="create-mom-btn">✎ Create Minutes of Meeting</button>
-      </div>
-    </div>
 
-    <!-- Sections for projects -->
-    <div class="section" id="onGoingSection">
-    <div style="display:flex; align-items:center; gap:10px;">
-        <button class="toggle-section-btn" data-target="onGoingTableContainer">▾</button>
-        <div class="on-going-word">
+    <!-- Main content container -->
+    <div class="main-content">
+      <div class="tracker-dashboard">
+        <!-- Search input and add project button -->
+        <div class="search-and-new-project">
+          <input
+            type="text"
+            id="filterInput"
+            placeholder="Search Projects by Name or Client..."
+          />
+          <button id="addProjectBtn" class="add-project-btn">+ Add Project</button>
+        </div>
+
+        <!-- Functional buttons for export/import and calendar -->
+        <div id="functionalityBtn">
+          <button id="exportXLSX" class="export-xlsx-btn">↓ Export to Excel</button>
+          <button id="importXLSX" class="import-xlsx-btn">↑ Import from Excel</button>
+          <button id="exportCalendarBtn" class="create-calendar-btn">
+            ▦ Export to Google Calendar
+          </button>
+          <button id="createMOMBtn" class="create-mom-btn">✎ Create Minutes of Meeting</button>
+        </div>
+      </div>
+
+      <!-- Section: On-going Projects -->
+      <div class="section" id="onGoingSection">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <!-- Toggle button to collapse/expand this section -->
+          <button class="toggle-section-btn" data-target="onGoingTableContainer">▾</button>
+          <div class="on-going-word">
             <h2>On-going Projects</h2>
             <div class="the-number">
-                <p class="dot-number-ongoing">●</p><p id="onGoingNumber"></p><p>items</p>
+              <p class="dot-number-ongoing">●</p>
+              <p id="onGoingNumber"></p>
+              <p>items</p>
             </div>
+          </div>
         </div>
-    </div>
-    <div id="onGoingTableContainer">
-        <div class="table-container">
-            <table id="onGoingTable">
-          <thead>
-            <tr>
-              <th id="toggle-task-column"></th>
-              <th data-key="projectName">Project Name</th>
-              <th data-key="client">Client</th>
-              <th data-key="personInCharge">PIC</th>
-              <th data-key="startDate">Start Date</th>
-              <th data-key="endDate">Due Date</th>
-              <th data-key="progress">Project Progress</th>
-              <th data-key="ongoingActions">Current Actions</th>
-              <th data-key="pastDueTasks">Overdue Tasks</th>
-              <th data-key="status">Status</th>
-              <th id="delete-project-column"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Project rows go here -->
-          </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 
+        <!-- Container for the on-going projects table -->
+        <div id="onGoingTableContainer">
+          <div class="table-container">
+            <table id="onGoingTable">
+              <thead>
+                <tr>
+                  <th id="toggle-task-column"></th>
+                  <th data-key="projectName">Project Name</th>
+                  <th data-key="client">Client</th>
+                  <th data-key="personInCharge">PIC</th>
+                  <th data-key="startDate">Start Date</th>
+                  <th data-key="endDate">Due Date</th>
+                  <th data-key="progress">Project Progress</th>
+                  <th data-key="ongoingActions">Current Actions</th>
+                  <th data-key="pastDueTasks">Overdue Tasks</th>
+                  <th data-key="status">Status</th>
+                  <th id="delete-project-column"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Project rows will be dynamically inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Finished Projects -->
       <div class="section" id="doneSection">
-    <div style="display:flex; align-items:center; gap:10px;">
-        <button class="toggle-section-btn" data-target="doneTableContainer">▾</button>
-        <div class="finished-word">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button class="toggle-section-btn" data-target="doneTableContainer">▾</button>
+          <div class="finished-word">
             <h2>Finished Projects</h2>
             <div class="the-number">
-                <p class="dot-number-finished">●</p><p id="doneNumber"></p><p>items</p>
+              <p class="dot-number-finished">●</p>
+              <p id="doneNumber"></p>
+              <p>items</p>
             </div>
+          </div>
         </div>
-    </div>
-    <div id="doneTableContainer">
-        <div class="table-container">
-        <table id="doneTable">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Project Name</th>
-              <th>Client</th>
-              <th>PIC</th>
-              <th>Start Date</th>
-              <th>Finished Date</th>
-              <th>Project Progress</th>
-              <th></th>
-              <th></th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Done projects -->
-          </tbody>
-          </table>
-        </div>
-    </div>
-</div>
 
+        <div id="doneTableContainer">
+          <div class="table-container">
+            <table id="doneTable">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Project Name</th>
+                  <th>Client</th>
+                  <th>PIC</th>
+                  <th>Start Date</th>
+                  <th>Finished Date</th>
+                  <th>Project Progress</th>
+                  <th></th>
+                  <th></th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Finished project rows will be dynamically inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Hold/Closed Projects -->
       <div class="section" id="holdCloseSection">
-    <div style="display:flex; align-items:center; gap:10px;">
-        <button class="toggle-section-btn" data-target="holdCloseTableContainer">▾</button>
-        <div class="hold-word">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button class="toggle-section-btn" data-target="holdCloseTableContainer">▾</button>
+          <div class="hold-word">
             <h2>Hold/Closed Projects</h2>
             <div class="the-number">
-                <p class="dot-number-hold">●</p><p id="holdNumber"></p><p>items</p>
+              <p class="dot-number-hold">●</p>
+              <p id="holdNumber"></p>
+              <p>items</p>
             </div>
+          </div>
         </div>
-    </div>
-    <div id="holdCloseTableContainer">
-        <div class="table-container">
-        <table id="holdCloseTable">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Project Name</th>
-              <th>Client</th>
-              <th>PIC</th>
-              <th>Start Date</th>
-              <th>Due Date</th>
-              <th>Project Progress</th>
-              <th>Last Actions</th>
-              <th>Overdue Tasks</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Hold/Close projects -->
-          </tbody>
-        </table>
-        </div>
-    </div>
-</div>
-</div>
 
+        <div id="holdCloseTableContainer">
+          <div class="table-container">
+            <table id="holdCloseTable">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Project Name</th>
+                  <th>Client</th>
+                  <th>PIC</th>
+                  <th>Start Date</th>
+                  <th>Due Date</th>
+                  <th>Project Progress</th>
+                  <th>Last Actions</th>
+                  <th>Overdue Tasks</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Hold/Closed project rows will be dynamically inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main JavaScript module -->
     <script type="module" src="script.js"></script>
 
+    <!-- Admin section with log page button -->
     <div class="admin-section">
       <button id="logsBtn" class="log-btn">Log Page</button>
     </div>
 
+    <!-- Footer with copyright -->
     <footer>
       <p>&copy; 2026 Benderang Project Tracker. All rights reserved.</p>
     </footer>
-
   </body>
 </html>
