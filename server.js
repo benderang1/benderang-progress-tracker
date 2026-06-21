@@ -122,6 +122,88 @@ function writeLog(db, username, action, entityType, entityId, entityName, detail
   );
 }
 
+function reassignPriority(db, projectId, newPriority) {
+  return new Promise((resolve, reject) => {
+
+    db.get(
+        "SELECT priority FROM projects WHERE id = ?",
+        [projectId],
+        (err, row) => {
+            if (err) return reject(err);
+
+            const oldPriority = row ? row.priority : null;
+
+            if (oldPriority === newPriority) {
+                return resolve();
+            }
+
+            db.serialize(() => {
+                db.run("BEGIN TRANSACTION");
+
+                // Moving INTO ranked territory (newPriority >= 1)
+                if (newPriority >= 1) {
+
+                    if (oldPriority === null || oldPriority === 0 || newPriority < oldPriority) {
+                        // Coming from unranked (0) or moving up: shift everyone at/after newPriority down by 1
+                        db.run(
+                            `
+                            UPDATE projects
+                            SET priority = priority + 1
+                            WHERE priority >= ?
+                              AND priority >= 1
+                              AND id <> ?
+                            `,
+                            [newPriority, projectId]
+                        );
+                    } else {
+                        // Moving down within ranked territory
+                        db.run(
+                            `
+                            UPDATE projects
+                            SET priority = priority - 1
+                            WHERE priority > ?
+                              AND priority <= ?
+                              AND id <> ?
+                            `,
+                            [oldPriority, newPriority, projectId]
+                        );
+                    }
+                }
+                else {
+                    // Moving back to unranked (0): close the gap left behind in ranked territory
+                    if (oldPriority !== null && oldPriority >= 1) {
+                        db.run(
+                            `
+                            UPDATE projects
+                            SET priority = priority - 1
+                            WHERE priority > ?
+                              AND id <> ?
+                            `,
+                            [oldPriority, projectId]
+                        );
+                    }
+                }
+
+                db.run(
+                    "UPDATE projects SET priority = ? WHERE id = ?",
+                    [newPriority, projectId],
+                    (err) => {
+                        if (err) {
+                            db.run("ROLLBACK");
+                            return reject(err);
+                        }
+                        db.run("COMMIT", (err) => {
+                            if (err) return reject(err);
+                            resolve();
+                        });
+                    }
+                );
+            });
+        }
+    );
+  });
+}
+
 // Express middleware setup
 app.use(express.json());
 app.use(
@@ -268,6 +350,7 @@ app.get("/export-excel", requireLogin, (req, res) => {
           { header: "Assigned To", key: "pic", width: 20 },
           { header: "Issued Date", key: "startDate", width: 20 },
           { header: "Due Date", key: "dueDate", width: 20 },
+          { header: "Completion Date", key: "completionDate", width:15 },
           { header: "Task Progress (%)", key: "percentage", width: 20 },
           { header: "Comments", key: "comments", width: 40 },
           { header: "Status", key: "status", width: 20 },
@@ -282,6 +365,7 @@ app.get("/export-excel", requireLogin, (req, res) => {
             pic: task.pic,
             startDate: task.startDate,
             dueDate: task.dueDate,
+            completionDate: task.completionDate || "",
             percentage: task.percentage || 0,
             comments: task.comments,
             status: task.status,
@@ -527,11 +611,12 @@ app.post("/projects", requireLogin, (req, res) => {
   db.run(
     `
     INSERT INTO projects
-      (projectName, client, personInCharge, startDate, endDate, progress, ongoingActions, pastDueTasks, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (projectName, priority, client, personInCharge, startDate, endDate, progress, ongoingActions, pastDueTasks, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       p.projectName,
+      0, // ← always starts at priority 0
       p.client,
       p.personInCharge,
       p.startDate,
@@ -547,7 +632,7 @@ app.post("/projects", requireLogin, (req, res) => {
         return res.status(500).json({ error: err.message });
       }
 
-      res.json({ id: this.lastID });
+      res.json({ id: this.lastID, priority: 0 });
       writeLog(db, req.session.username, "CREATE", "project", this.lastID, p.projectName);
     }
   );
@@ -564,8 +649,8 @@ app.post("/projects/:id/tasks", requireLogin, (req, res) => {
   db.run(
     `
     INSERT INTO tasks
-      (project_id, task, pic, startDate, dueDate, progress, comments, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (project_id, task, pic, startDate, dueDate, progress, comments, status, completionDate)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       req.params.id,
@@ -576,6 +661,7 @@ app.post("/projects/:id/tasks", requireLogin, (req, res) => {
       task.progress,
       task.comments,
       task.status,
+      task.completionDate || ""
     ],
     function (err) {
       if (err) {
@@ -593,39 +679,50 @@ app.post("/projects/:id/tasks", requireLogin, (req, res) => {
  * PUT /projects/:id - Update project by ID
  * Requires login
  */
-app.put("/projects/:id", requireLogin, (req, res) => {
+app.put("/projects/:id", requireLogin, async (req, res) => {
   const projectId = req.params.id;
   const project = req.body;
   const db = new sqlite3.Database("./database/tracker.db");
 
-  db.run(
-    `
-    UPDATE projects
-    SET projectName = ?, client = ?, personInCharge = ?, startDate = ?, endDate = ?, progress = ?, ongoingActions = ?, pastDueTasks = ?, status = ?
-    WHERE id = ?
-    `,
-    [
-      project.projectName,
-      project.client,
-      project.personInCharge,
-      project.startDate,
-      project.endDate,
-      project.progress,
-      project.ongoingActions,
-      project.pastDueTasks,
-      project.status,
-      projectId,
-    ],
-    function (err) {
-      if (err) {
-        console.error("SQLite error:", err.message);
-        return res.status(500).json({ error: err.message });
-      }
-
-      res.json({ success: true });
-      writeLog(db, req.session.username, "UPDATE", "project", projectId, project.projectName);
+  try {
+    // Handle priority reassignment first if priority is being changed
+    if (project.priority !== undefined && project.priority !== null) {
+      await reassignPriority(db, projectId, parseInt(project.priority));
     }
-  );
+
+    db.run(
+      `
+      UPDATE projects
+      SET projectName = ?, client = ?, personInCharge = ?, startDate = ?, endDate = ?, progress = ?, ongoingActions = ?, pastDueTasks = ?, status = ?
+      WHERE id = ?
+      `,
+      [
+        project.projectName,
+        project.client,
+        project.personInCharge,
+        project.startDate,
+        project.endDate,
+        project.progress,
+        project.ongoingActions,
+        project.pastDueTasks,
+        project.status,
+        projectId,
+      ],
+      function (err) {
+        if (err) {
+          console.error("SQLite error:", err.message);
+          return res.status(500).json({ error: err.message });
+        }
+
+        res.json({ success: true });
+        writeLog(db, req.session.username, "UPDATE", "project", projectId, project.projectName);
+      }
+    );
+  }
+  catch (err) {
+    console.error("Priority reassignment error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /**
@@ -640,7 +737,7 @@ app.put("/tasks/:id", requireLogin, (req, res) => {
   db.run(
     `
     UPDATE tasks
-    SET task = ?, pic = ?, startDate = ?, dueDate = ?, progress = ?, comments = ?, status = ?
+    SET task = ?, pic = ?, startDate = ?, dueDate = ?, progress = ?, comments = ?, status = ?, completionDate = ?
     WHERE id = ?
     `,
     [
@@ -651,6 +748,7 @@ app.put("/tasks/:id", requireLogin, (req, res) => {
       task.progress,
       task.comments,
       task.status,
+      task.completionDate,
       taskId,
     ],
     function (err) {
@@ -672,15 +770,36 @@ app.put("/tasks/:id", requireLogin, (req, res) => {
 app.delete("/projects/:id", requireLogin, (req, res) => {
   const db = new sqlite3.Database("./database/tracker.db");
 
-  db.run("DELETE FROM projects WHERE id = ?", [req.params.id], function (err) {
-    if (err) {
-      console.error("SQLite error:", err.message);
-      return res.status(500).json({ error: err.message });
-    }
+  db.get(
+    "SELECT priority FROM projects WHERE id = ?",
+    [req.params.id],
+    (err, row) => {
+      if (err) {
+        console.error("SQLite error:", err.message);
+        return res.status(500).json({ error: err.message });
+      }
 
-    res.json({ success: true });
-    writeLog(db, req.session.username, "DELETE", "project", req.params.id, "");
-  });
+      const deletedPriority = row ? row.priority : null;
+
+      db.run("DELETE FROM projects WHERE id = ?", [req.params.id], function (err) {
+        if (err) {
+          console.error("SQLite error:", err.message);
+          return res.status(500).json({ error: err.message });
+        }
+
+        // Shift everyone after the deleted priority down by 1, closing the gap
+        if (deletedPriority !== null && deletedPriority >= 1) {
+          db.run(
+            "UPDATE projects SET priority = priority - 1 WHERE priority > ?",
+            [deletedPriority]
+          );
+        }
+
+        res.json({ success: true });
+        writeLog(db, req.session.username, "DELETE", "project", req.params.id, "");
+      });
+    }
+  );
 });
 
 /**

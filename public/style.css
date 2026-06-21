@@ -105,7 +105,8 @@ header {
     justify-content: space-between;
     border-radius: 12px;
     padding: 16px 20px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #eef2f7;
 }
 
 #functionalityBtn {
@@ -241,6 +242,17 @@ button:active {
     width: 150px;
 }
 
+.nested-table tfoot .task-footer-row td {
+    padding: 10px 14px;
+    background-color: #f8fafc;
+    text-align: left;
+    border-top: 1px solid #e2e8f0;
+}
+
+.add-task-btn-bottom {
+    padding: 7px 12px;
+}
+
 /* ── Inputs & Selects ── */
 input, select {
     padding: 8px 10px;
@@ -252,6 +264,7 @@ input, select {
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
     background: #fff;
+    white-space: no-wrap;
 }
 
 input:focus, select:focus {
@@ -270,7 +283,8 @@ input::placeholder {
 /* ── Section Cards ── */
 .section {
     background: white;
-    border-radius: 12px;
+    border-radius: 14px;
+    border-top: 3px solid burlywood;
     padding: 5px 20px;
     margin-top: 20px;
     margin-bottom: 4px;
@@ -300,17 +314,23 @@ table {
     max-width: 100%;
 }
 
+thead tr {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
 th, td {
-    padding: 7px 14px;
+    padding: 10px 16px;
     text-align: left;
     user-select: none;
     border-bottom: 1px solid #e2e8f0;
+    border-right: none; /* ← explicitly remove vertical border */
     vertical-align: middle;
     font-size: 1rem;
 }
 
 th {
-    background-color: #3b82f6;
+    background: transparent;
+    border: none;
     color: white;
     font-size: 1rem;
     font-weight: 600;
@@ -320,6 +340,21 @@ th {
     cursor: pointer;
     white-space: nowrap;
 
+}
+
+table.nested-table thead tr {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+th[data-key="priority"], td.editable:nth-child(3) {
+    text-align: center;
+    width: 60px;
+}
+
+#onGoingTable td:nth-child(10),
+#doneTable td:nth-child(10),
+#holdCloseTable td:nth-child(10) {
+    text-align: center;
 }
 
 th:first-child { border-radius: 10px 0 0 0; }
@@ -363,13 +398,18 @@ tbody tr:not(.nested-tasks-row):hover {
     margin: 8px 0 16px 24px;
     border-left: 4px solid #2563eb;
     border-radius: 0 8px 8px 0;
-    overflow: hidden;
 }
 
 table.nested-table th {
-    background-color: #16a34a;
+    position: sticky;
+    z-index: 10;
+    background: #16a34a;
+    background-attachment: local;
+    background-clip: padding-box;
+    box-shadow: inset 0 -1px 0 #e2e8f0;
     text-transform: uppercase;
     font-size: 1rem;
+    top: 0;
 }
 
 .nested-table tbody tr:nth-child(2n + 1) {
@@ -431,6 +471,7 @@ table.nested-table th {
 /* ── Overdue Badge ── */
 .overdue-badge {
     background-color: #ef4444;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
     color: white;
     padding: 2px 8px;
     border-radius: 12px;
@@ -513,6 +554,49 @@ footer {
 #holdCloseSection .table-container tr:nth-child(2n + 1),
 #doneSection .table-container tr:nth-child(2n + 1) {
     background-color: #eff6ff;
+}
+
+.overdue-row {
+    border-left: 4px solid #ef4444;
+    background-color: #fef2f2 !important;
+}
+
+.overdue-row:hover {
+    background-color: #fee2e2 !important;
+}
+
+.progress-fill-overdue {
+    background: linear-gradient(90deg, #f87171, #ef4444) !important;
+}
+
+/* Wrapper that bounds and internally scrolls each nested task table */
+.nested-table-scroll-wrapper {
+    max-height: 680px;
+    overflow-y: auto;
+    overflow-x: auto;
+    margin: 8px 0 16px 24px;
+    border-left: 4px solid #2563eb;
+    border-radius: 0 8px 8px 0;
+}
+
+/* Move the margin/border that used to live on .nested-table onto the wrapper above,
+   so remove them from .nested-table itself */
+.nested-table {
+    width: 98%;
+    margin: 0;
+    border-left: none;
+    border-radius: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* Filter/Add Task row sticks to the top of the wrapper */
+.nested-table .task-filter-row td {
+    position: sticky;
+    top: 0;
+    z-index: 11;
+    background-color: #f8fafc;
+    background-clip: padding-box;
 }
 
 @media (max-width: 768px) {
@@ -602,7 +686,7 @@ footer {
 
     th, td {
         font-size: 0.8rem;
-        padding: 6px 10px;
+        padding: 10px 16px;
         white-space: nowrap;
     }
 

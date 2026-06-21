@@ -48,6 +48,62 @@ async function saveTask(task) {
   }
 }
 
+function calculateProjectProgress(project) {
+    if (!project.tasks || project.tasks.length === 0) {
+        return project.progress || 0; // keep manual value if no tasks
+    }
+
+    const total = project.tasks.reduce((sum, task) => sum + (parseInt(task.progress) || 0), 0);
+    return Math.round(total / project.tasks.length);
+}
+
+function isTaskOverdue(task) {
+    if (task.status === "Done") return false;
+    if (!task.dueDate) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const due = new Date(task.dueDate);
+    due.setHours(0, 0, 0, 0);
+
+    return due < today;
+}
+
+function calculateOverdueTasks(project) {
+    if (!project.tasks || project.tasks.length === 0) {
+        return 0;
+    }
+
+    return project.tasks.filter(task => isTaskOverdue(task)).length;
+}
+
+async function syncProjectCalculations(project) {
+    const newProgress = calculateProjectProgress(project);
+    const newOverdue = calculateOverdueTasks(project);
+
+    let changed = false;
+
+    if (project.progress !== newProgress) {
+        project.progress = newProgress;
+        changed = true;
+    }
+
+    if (project.pastDueTasks !== newOverdue) {
+        project.pastDueTasks = newOverdue;
+        changed = true;
+    }
+
+    if (changed) {
+        try {
+            await saveProject(project);
+        }
+        catch (err) {
+            console.error("Failed to sync project calculations:", err);
+        }
+    }
+}
+
 /**
  * Create a new project on server
  * @param {Object} project - New project data
@@ -85,6 +141,35 @@ async function createTask(projectId, task) {
   }
 
   return await response.json();
+}
+
+/**
+ * Capture current scrollTop of each open nested-table scroll wrapper, keyed by projectId
+ * @returns {Object} Map of projectId -> scrollTop
+ */
+function captureNestedScrollPositions() {
+  const positions = {};
+  document.querySelectorAll(".nested-tasks-row").forEach(row => {
+    const wrapper = row.querySelector(".nested-table-scroll-wrapper");
+    if (wrapper) {
+      positions[row.dataset.projectId] = wrapper.scrollTop;
+    }
+  });
+  return positions;
+}
+
+/**
+ * Restore scrollTop of each nested-table scroll wrapper after re-render
+ * @param {Object} positions - Map of projectId -> scrollTop
+ */
+function restoreNestedScrollPositions(positions) {
+  document.querySelectorAll(".nested-tasks-row").forEach(row => {
+    const wrapper = row.querySelector(".nested-table-scroll-wrapper");
+    const saved = positions[row.dataset.projectId];
+    if (wrapper && saved) {
+      wrapper.scrollTop = saved;
+    }
+  });
 }
 
 /**
@@ -140,9 +225,15 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
         option.textContent = opt;
         if (opt === value) option.selected = true;
         select.appendChild(option);
+
+        select.addEventListener("change", () => {
+        if (select.value === "Done" && isTask) {
+            rowData.completionDate = new Date().toISOString().split("T")[0];
+        }
+    });
       });
       return select;
-    } else if (["startDate", "endDate", "dueDate"].includes(key)) {
+    } else if (["startDate", "endDate", "dueDate", "completionDate"].includes(key)) {
       const input = document.createElement("input");
       input.type = "date";
       input.value = value || "";
@@ -152,6 +243,13 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
       input.type = "number";
       input.min = 0;
       input.value = value || 0;
+      return input;
+    } else if (key === "priority") {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = 0;
+      input.max = projects.length;
+      input.value = value ?? 0;
       return input;
     } else {
       const input = document.createElement("input");
@@ -163,18 +261,20 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
 
   // For progress field, show progress bar instead of plain text
   if (key === "progress") {
+    const overdueClass = (isTask && isTaskOverdue(rowData)) ? "progress-fill-overdue" : "";
     td.innerHTML = `
       <div class="progress-container">
-        <div class="progress-fill" style="width:${rowData[key]}%"></div>
+        <div class="progress-fill ${overdueClass}" style="width:${rowData[key]}%"></div>
         <div class="progress-text">${rowData[key]}%</div>
       </div>
     `;
   } else {
     td.textContent =
-      (["startDate", "endDate", "dueDate"].includes(key) && rowData[key])
+      (["startDate", "endDate", "dueDate", "completionDate"].includes(key) && rowData[key])
         ? formatDate(rowData[key])
         : rowData[key] || "";
   }
+  
 
   // Enable inline editing on click
   td.addEventListener("click", () => {
@@ -189,18 +289,82 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
     async function saveEdit() {
       let newValue = input.value;
 
-      if (["progress", "pastDueTasks"].includes(key)) {
+      if (["progress", "pastDueTasks", "priority"].includes(key)) {
         newValue = parseInt(newValue) || 0;
       }
 
       const oldValue = rowData[key];
       rowData[key] = newValue;
 
+      const savedScrollPositions = captureNestedScrollPositions();
+
       try {
+
+        const today = new Date().toISOString().split("T")[0];
+
+        if (key === "progress") {
+            if (newValue === 100) {
+                rowData.status = "Done";
+                rowData.completionDate = today;
+            }
+            else if (oldValue === 100 && newValue < 100) {
+                // Moving away from 100% undoes the Done state
+                if (rowData.status === "Done") {
+                    rowData.status = "On-going";
+                }
+
+                rowData.completionDate = "";
+            }
+
+        }
+        else if (key === "status") {
+
+            if (newValue === "Done") {
+                rowData.progress = 100;
+                rowData.completionDate = today;
+            }
+            else if (oldValue === "Done") {
+                rowData.completionDate = "";
+
+                // Prevent non-Done tasks from staying at 100%
+                if (rowData.progress === 100) {
+                    rowData.progress = 90;
+                }
+            }
+
+        }
+        else if (key === "completionDate") {
+
+            if (newValue) {
+                rowData.status = "Done";
+                rowData.progress = 100;
+            }
+            else {
+                if (rowData.status === "Done") {
+                    rowData.status = "On-going";
+                }
+
+                if (rowData.progress === 100) {
+                    rowData.progress = 90;
+                }
+            }
+
+        }
+
         if (isTask) {
           await saveTask(rowData);
+          const project = projects.find(p => p.id === projectId);
+          if (project) {
+              await syncProjectCalculations(project);
+          }
         } else {
           await saveProject(rowData);
+          if (key === "priority") {
+              const refreshed = await fetch("/projects");
+              const refreshedProjects = await refreshed.json();
+              projects.length = 0;
+              projects.push(...refreshedProjects);
+          }
         }
       } catch (err) {
         rowData[key] = oldValue;
@@ -220,6 +384,10 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
       if (isTask) {
         showNestedTable(projectId);
       }
+
+      requestAnimationFrame(() => {
+        restoreNestedScrollPositions(savedScrollPositions);
+      });
     }
 
     input.addEventListener("blur", saveEdit);
@@ -256,19 +424,35 @@ function createProjectRow(project) {
   tr.appendChild(toggleTd);
 
   // Editable cells for project fields
-  [
-    "projectName",
-    "client",
-    "personInCharge",
-    "startDate",
-    "endDate",
-    "progress",
-    "ongoingActions",
-    "pastDueTasks",
-    "status",
-  ].forEach(key => {
-    tr.appendChild(createEditableCell(project, key, false, project.id));
-  });
+  tr.appendChild(createEditableCell(project, "projectName", false, project.id));
+  tr.appendChild(createEditableCell(project, "priority", false, project.id));
+  tr.appendChild(createEditableCell(project, "client", false, project.id));
+  tr.appendChild(createEditableCell(project, "personInCharge", false, project.id));
+  tr.appendChild(createEditableCell(project, "startDate", false, project.id));
+  tr.appendChild(createEditableCell(project, "endDate", false, project.id));
+
+  // Progress — now read-only, auto-calculated
+  const progressTd = document.createElement("td");
+  progressTd.innerHTML = `
+      <div class="progress-container">
+          <div class="progress-fill" style="width:${project.progress}%"></div>
+          <div class="progress-text">${project.progress}%</div>
+      </div>
+  `;
+  tr.appendChild(progressTd);
+
+  tr.appendChild(createEditableCell(project, "ongoingActions", false, project.id));
+
+  // Overdue tasks — now read-only, auto-calculated
+  const overdueTd = document.createElement("td");
+  if (project.pastDueTasks > 0) {
+      overdueTd.innerHTML = `<span class="overdue-badge">${project.pastDueTasks}</span>`;
+  } else {
+      overdueTd.innerHTML = `<span class="overdue-zero">0</span>`;
+  }
+  tr.appendChild(overdueTd);
+
+  tr.appendChild(createEditableCell(project, "status", false, project.id));
 
   // Delete project button cell
   const actionsTd = document.createElement("td");
@@ -294,9 +478,12 @@ function createNestedTasksRow(project) {
   tr.dataset.projectId = project.id;
 
   const td = document.createElement("td");
-  td.colSpan = 11;
+  td.colSpan = 12;
 
-  // Nested tasks table with header, filters, and add task button
+  // Wrap the nested table in its own scrollable container
+  const scrollWrapper = document.createElement("div");
+  scrollWrapper.classList.add("nested-table-scroll-wrapper");
+
   const nestedTable = document.createElement("table");
   nestedTable.classList.add("nested-table");
 
@@ -306,7 +493,7 @@ function createNestedTasksRow(project) {
   const filterRow = document.createElement("tr");
   filterRow.classList.add("task-filter-row");
   const filterTd = document.createElement("td");
-  filterTd.colSpan = 11;
+  filterTd.colSpan = 12;
   filterTd.innerHTML = `
     <div class="filter-add-task-section">
       <label>Filter Tasks of <b>${project.projectName}</b> by Status:</label>
@@ -331,6 +518,7 @@ function createNestedTasksRow(project) {
     "Assigned To",
     "Issued Date",
     "Due Date",
+    "Completion Date",
     "Task Progress",
     "Comments",
     "Status",
@@ -349,11 +537,32 @@ function createNestedTasksRow(project) {
   const tbody = document.createElement("tbody");
   nestedTable.appendChild(tbody);
 
-  td.appendChild(nestedTable);
+  // Footer row with a second "Add Task" button, after the last task row
+  const tfoot = document.createElement("tfoot");
+  const footerRow = document.createElement("tr");
+  footerRow.classList.add("task-footer-row");
+  const footerTd = document.createElement("td");
+  footerTd.colSpan = 10;
+  footerTd.innerHTML = `<button class="add-task-btn add-task-btn-bottom">+ Add Task</button>`;
+  footerRow.appendChild(footerTd);
+  tfoot.appendChild(footerRow);
+  nestedTable.appendChild(tfoot);
+
+  // Wrap the table so its header can stick within a bounded scroll box
+  scrollWrapper.classList.add("nested-table-scroll-wrapper");
+  scrollWrapper.appendChild(nestedTable);
+
+  td.appendChild(scrollWrapper);
   tr.appendChild(td);
 
-  // Attach sorting, filtering, and add task event listeners
   attachNestedTableEvents(nestedTable, project);
+
+  requestAnimationFrame(() => {
+    const filterRowHeight = thead.querySelector(".task-filter-row td").offsetHeight;
+    nestedTable.querySelectorAll("thead tr:not(.task-filter-row) th").forEach(th => {
+      th.style.top = `${filterRowHeight}px`;
+    });
+  });
 
   return tr;
 }
@@ -366,6 +575,7 @@ function createNestedTasksRow(project) {
 function attachNestedTableEvents(table, project) {
   const thead = table.querySelector("thead");
   const tbody = table.querySelector("tbody");
+  const tfoot = table.querySelector("tfoot");
   let sortKey = null;
   let sortDirection = "asc";
 
@@ -391,6 +601,7 @@ function attachNestedTableEvents(table, project) {
   const statusFilter = thead.querySelector(".task-status-filter");
   const textFilter = thead.querySelector(".task-text-filter");
   const addTaskBtn = thead.querySelector(".add-task-btn");
+  const addTaskBtnBottom = tfoot.querySelector(".add-task-btn-bottom");
 
   statusFilter.addEventListener("change", () => {
     renderTasks(project, tbody, sortKey, sortDirection, getNestedFilters(table));
@@ -401,6 +612,10 @@ function attachNestedTableEvents(table, project) {
 
   // Add new task button
   addTaskBtn.addEventListener("click", () => {
+    addNewTask(project.id);
+  });
+
+    addTaskBtnBottom.addEventListener("click", () => {
     addNewTask(project.id);
   });
 
@@ -510,6 +725,10 @@ function renderTasks(project, tbody, sortKey, sortDirection, filters) {
     const tr = document.createElement("tr");
     tr.dataset.taskId = task.id;
 
+    if (isTaskOverdue(task)) {
+        tr.classList.add("overdue-row");
+    }
+
     // Number cell
     const numberTd = document.createElement("td");
     numberTd.textContent = index + 1;
@@ -521,6 +740,7 @@ function renderTasks(project, tbody, sortKey, sortDirection, filters) {
       "pic",
       "startDate",
       "dueDate",
+      "completionDate",
       "progress",
       "comments",
       "status",
@@ -556,9 +776,17 @@ async function deleteTask(projectId, taskId) {
   await fetch(`/tasks/${taskId}`, { method: "DELETE" });
 
   project.tasks = project.tasks.filter(t => t.id !== taskId);
+  
+  const savedScrollPositions = captureNestedScrollPositions();
+
+  await syncProjectCalculations(project);
 
   renderAllTables();
   showNestedTable(projectId);
+
+  requestAnimationFrame(() => {
+      restoreNestedScrollPositions(savedScrollPositions);
+    });
 }
 
 /**
@@ -592,15 +820,24 @@ async function addNewTask(projectId) {
     progress: 0,
     comments: "",
     status: "On-going",
+    completionDate: "",
   };
+
+  const savedScrollPositions = captureNestedScrollPositions();
 
   try {
     const result = await createTask(projectId, newTask);
     newTask.id = result.id;
     project.tasks.push(newTask);
 
+    await syncProjectCalculations(project);
+
     renderAllTables();
     showNestedTable(projectId);
+
+    requestAnimationFrame(() => {
+      restoreNestedScrollPositions(savedScrollPositions);
+    });
   } catch (err) {
     console.error(err);
     alert("Failed to create task");
@@ -624,6 +861,7 @@ document.getElementById("addProjectBtn").addEventListener("click", async () => {
   try {
     const result = await createProject(newProject);
     newProject.id = result.id;
+    newProject.priority = result.priority;
     newProject.tasks = [];
     projects.push(newProject);
 
@@ -645,10 +883,18 @@ function toggleNestedTable(projectId, btn) {
 
   if (nestedRow.classList.contains("hidden")) {
     nestedRow.classList.remove("hidden");
-    btn.textContent = "▾"; // expanded arrow
+    btn.textContent = "▾";
+
+    requestAnimationFrame(() => {
+      const filterRowEl = nestedRow.querySelector(".task-filter-row td");
+      const filterRowHeight = filterRowEl ? filterRowEl.offsetHeight : 0;
+      nestedRow.querySelectorAll("thead tr:not(.task-filter-row) th").forEach(th => {
+        th.style.top = `${filterRowHeight}px`;
+      });
+    });
   } else {
     nestedRow.classList.add("hidden");
-    btn.textContent = "▸"; // collapsed arrow
+    btn.textContent = "▸";
   }
 }
 
@@ -664,12 +910,22 @@ function showNestedTable(projectId) {
 
   const toggleBtn = document.querySelector(`tr[data-project-id='${projectId}'] button.toggle-btn`);
   if (toggleBtn) toggleBtn.textContent = "▾";
+
+  requestAnimationFrame(() => {
+    const filterRowEl = nestedRow.querySelector(".task-filter-row td");
+    const filterRowHeight = filterRowEl ? filterRowEl.offsetHeight : 0;
+    nestedRow.querySelectorAll("thead tr:not(.task-filter-row) th").forEach(th => {
+      th.style.top = `${filterRowHeight}px`;
+    });
+  });
 }
 
 /**
  * Render all project tables and nested tasks
  */
 function renderAllTables() {
+  const savedScrollPositions = captureNestedScrollPositions();
+
   // Clear all project tables
   ["onGoingTable", "doneTable", "holdCloseTable"].forEach(id => {
     document.querySelector(`#${id} tbody`).innerHTML = "";
@@ -689,8 +945,17 @@ function renderAllTables() {
     return true;
   });
 
-  // Sort projects alphabetically by projectName
-  filteredProjects.sort((a, b) => a.projectName.localeCompare(b.projectName));
+  // Sort projects by priority
+  filteredProjects.sort((a, b) => {
+      const pa = a.priority ?? 0;
+      const pb = b.priority ?? 0;
+
+      if (pa === 0 && pb === 0) return 0; // multiple unranked stay in whatever order
+      if (pa === 0) return -1;
+      if (pb === 0) return 1;
+
+      return pa - pb;
+  });
 
   // Append projects and nested tasks to appropriate tables by status
   filteredProjects.forEach(project => {
@@ -706,7 +971,10 @@ function renderAllTables() {
       document.querySelector("#holdCloseTable tbody").appendChild(projectRow);
     }
   });
+
+  restoreNestedScrollPositions(savedScrollPositions);
 }
+
 
 // Filter input event listener to re-render tables on input
 document.getElementById("filterInput").addEventListener("input", renderAllTables);
@@ -777,3 +1045,14 @@ document.querySelectorAll(".toggle-section-btn").forEach(btn => {
     btn.textContent = "▸";
   }
 });
+
+
+async function recalculateAllProjects() {
+    for (const project of projects) {
+        await syncProjectCalculations(project);
+    }
+    renderAllTables();
+    alert("All projects recalculated!");
+}
+
+window.recalculateAllProjects = recalculateAllProjects;

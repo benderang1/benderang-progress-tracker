@@ -1,99 +1,47 @@
-document
-    .getElementById("loginForm")
-    .addEventListener("submit", async e => {
+// Get references to DOM elements
+const loginForm = document.getElementById("loginForm");
+const passwordInput = document.getElementById("password");
+const toggleButton = document.getElementById("togglePassword");
+const eyeIcon = document.getElementById("eyeIcon");
 
-        e.preventDefault();
+// Handle form submission asynchronously
+loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault(); // Prevent default form submission behavior (page reload)
 
-        const username =
-            document.getElementById("username").value;
+    // Get username and password values from input fields
+    const username = document.getElementById("username").value;
+    const password = passwordInput.value;
 
-        const password =
-            document.getElementById("password").value;
+    try {
+        // Send login data to server via POST request
+        const response = await fetch("/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ username, password })
+        });
 
-        const response = await fetch(
-            "/login",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            }
-        );
-
+        // Redirect on successful login, otherwise show alert
         if (response.ok) {
             window.location.href = "/index.html";
         } else {
             alert("Login failed");
         }
-    });document
-    .getElementById("loginForm")
-    .addEventListener("submit", async e => {
+    } catch (error) {
+        // Handle network or other errors gracefully
+        console.error("Login error:", error);
+        alert("An error occurred during login. Please try again.");
+    }
+});
 
-        e.preventDefault();
-
-        const username =
-            document.getElementById("username").value;
-
-        const password =
-            document.getElementById("password").value;
-
-        const response = await fetch(
-            "/login",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            }
-        );
-
-        if (response.ok) {
-            window.location.href = "/index.html";
-        } else {
-            alert("Login failed");
-        }
-    });
-
-    const passwordInput =
-    document.getElementById("password");
-
-    const toggleButton =
-        document.getElementById("togglePassword");
-
-    const eyeIcon =
-        document.getElementById("eyeIcon");
-
-    toggleButton.addEventListener(
-        "click",
-        () => {
-
-            if (
-                passwordInput.type ===
-                "password"
-            ) {
-
-                passwordInput.type = "text";
-
-                eyeIcon.src =
-                    "src/hide.png";
-
-            } else {
-
-                passwordInput.type =
-                    "password";
-
-                eyeIcon.src =
-                    "src/visible.png";
-
-            }
-
-        }
-    );
+// Toggle password visibility when the toggle button is clicked
+toggleButton.addEventListener("click", () => {
+    if (passwordInput.type === "password") {
+        passwordInput.type = "text"; // Show password
+        eyeIcon.src = "src/hide.png"; // Change icon to "hide"
+    } else {
+        passwordInput.type = "password"; // Hide password
+        eyeIcon.src = "src/visible.png"; // Change icon to "visible"
+    }
+});

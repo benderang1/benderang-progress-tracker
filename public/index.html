@@ -1,28 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- Character encoding for proper text rendering -->
     <meta charset="UTF-8" />
-    <!-- Responsive viewport for mobile devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Benderang Project Tracker</title>
-    <!-- Favicon for browser tab -->
     <link rel="icon" href="src/favicon.png" type="image/x-icon" />
-    <!-- External stylesheet -->
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <!-- Header section with logo and user info -->
     <header>
       <div id="benderangLogo">
-        <!-- Logo image -->
         <img src="src/favicon.png" alt="benderang-logo" />
         <h1>Benderang Project Tracker</h1>
       </div>
       <div class="log-stuff">
-        <!-- Display logged-in user info dynamically -->
         <p>Logged in as <span id="currentUser"></span></p>
-        <!-- Logout button -->
         <button id="logout-btn">Logout</button>
       </div>
     </header>
@@ -74,6 +66,7 @@
                 <tr>
                   <th id="toggle-task-column"></th>
                   <th data-key="projectName">Project Name</th>
+                  <th data-key="priority">Priority</th>
                   <th data-key="client">Client</th>
                   <th data-key="personInCharge">PIC</th>
                   <th data-key="startDate">Start Date</th>
@@ -174,15 +167,12 @@
       </div>
     </div>
 
-    <!-- Main JavaScript module -->
     <script type="module" src="script.js"></script>
 
-    <!-- Admin section with log page button -->
     <div class="admin-section">
       <button id="logsBtn" class="log-btn">Log Page</button>
     </div>
 
-    <!-- Footer with copyright -->
     <footer>
       <p>&copy; 2026 Benderang Project Tracker. All rights reserved.</p>
     </footer>
