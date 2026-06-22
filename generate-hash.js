@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 
-bcrypt.hash("Benderang1", 10)
+bcrypt.hash("Benderang0310", 10)
     .then(hash => {
         console.log(hash);
     });

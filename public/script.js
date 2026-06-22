@@ -1,6 +1,7 @@
 // Fetch current user info and handle authentication
 const authResponse = await fetch("/me");
 const authData = await authResponse.json();
+const isViewer = authData.role === "viewer";
 
 if (!authResponse.ok) {
   // Redirect to login if not authenticated
@@ -15,6 +16,67 @@ if (authData.role === "engineering admin") {
 // Fetch projects data from server
 const projectsResponse = await fetch("/projects");
 let projects = await projectsResponse.json();
+
+// Socket IO Listeners Start
+
+const socket = io();
+
+socket.on("taskUpdated", ({ taskId, task }) => {
+    const project = projects.find(p => p.tasks.some(t => t.id == taskId));
+    if (!project) return;
+
+    const taskIndex = project.tasks.findIndex(t => t.id == taskId);
+    if (taskIndex === -1) return;
+
+    project.tasks[taskIndex] = { ...project.tasks[taskIndex], ...task };
+
+    syncProjectCalculations(project).then(() => renderAllTables());
+});
+
+socket.on("taskCreated", (newTask) => {
+    const project = projects.find(p => p.id == newTask.project_id);
+    if (!project) return;
+    if (project.tasks.some(t => t.id === newTask.id)) return; // avoid dup if same client triggered it
+
+    project.tasks.push(newTask);
+    renderAllTables();
+});
+
+socket.on("taskDeleted", ({ taskId }) => {
+    projects.forEach(p => {
+        p.tasks = p.tasks.filter(t => t.id != taskId);
+    });
+    renderAllTables();
+});
+
+socket.on("projectCreated", (newProject) => {
+    if (projects.some(p => p.id === newProject.id)) return;
+    projects.push(newProject);
+    refreshProjectNumbers();
+    renderAllTables();
+});
+
+socket.on("projectUpdated", ({ projectId, project: updatedProject }) => {
+    const index = projects.findIndex(p => p.id == projectId);
+    if (index === -1) return;
+
+    projects[index] = { ...projects[index], ...updatedProject };
+    renderAllTables();
+});
+
+socket.on("projectDeleted", ({ projectId }) => {
+    projects = projects.filter(p => p.id != projectId);
+    refreshProjectNumbers();
+    renderAllTables();
+});
+
+socket.on("projectsNeedRefresh", async () => {
+    const refreshed = await fetch("/projects");
+    projects = await refreshed.json();
+    renderAllTables();
+});
+
+// Socket IO Listeners End
 
 /**
  * Save updated project to server
@@ -144,6 +206,30 @@ async function createTask(projectId, task) {
 }
 
 /**
+ * Capture which nested task tables are currently open (not hidden), keyed by projectId
+ * @returns {Set<string>} Set of projectIds that are currently expanded
+ */
+function captureOpenNestedTables() {
+  const openProjectIds = new Set();
+  document.querySelectorAll(".nested-tasks-row").forEach(row => {
+    if (!row.classList.contains("hidden")) {
+      openProjectIds.add(row.dataset.projectId);
+    }
+  });
+  return openProjectIds;
+}
+
+/**
+ * Restore which nested task tables should be open after re-render
+ * @param {Set<string>} openProjectIds - Set of projectIds that were open before re-render
+ */
+function restoreOpenNestedTables(openProjectIds) {
+  openProjectIds.forEach(projectId => {
+    showNestedTable(projectId);
+  });
+}
+
+/**
  * Capture current scrollTop of each open nested-table scroll wrapper, keyed by projectId
  * @returns {Object} Map of projectId -> scrollTop
  */
@@ -247,8 +333,11 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
     } else if (key === "priority") {
       const input = document.createElement("input");
       input.type = "number";
+
+      const onGoingCount = projects.filter(p => p.status === "On-going").length;
+
       input.min = 0;
-      input.max = projects.length;
+      input.max = onGoingCount;
       input.value = value ?? 0;
       return input;
     } else {
@@ -275,6 +364,12 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
         : rowData[key] || "";
   }
   
+  // Make cells read only for viewers
+  if (isViewer) {
+    td.classList.remove("editable"); // remove hover/cursor styling too
+    td.style.cursor = "default";
+    return td; // skip attaching click listener entirely
+  }
 
   // Enable inline editing on click
   td.addEventListener("click", () => {
@@ -291,6 +386,29 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
 
       if (["progress", "pastDueTasks", "priority"].includes(key)) {
         newValue = parseInt(newValue) || 0;
+      }
+
+      // Validate priority range using a fresh count from the database
+      if (key === "priority") {
+        let onGoingCount;
+
+        try {
+          const countResponse = await fetch("/projects/ongoing-count");
+          const countData = await countResponse.json();
+          onGoingCount = countData.count;
+        }
+        catch (err) {
+          console.error("Failed to fetch on-going count:", err);
+          alert("Could not verify priority range. Please try again.");
+          td.textContent = rowData[key] || "";
+          return;
+        }
+
+        if (newValue < 0 || newValue > onGoingCount) {
+          alert(`Priority must be between 0 and ${onGoingCount} (current number of On-going projects).`);
+          td.textContent = rowData[key] || "";
+          return;
+        }
       }
 
       const oldValue = rowData[key];
@@ -325,7 +443,6 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
             }
             else if (oldValue === "Done") {
                 rowData.completionDate = "";
-
                 // Prevent non-Done tasks from staying at 100%
                 if (rowData.progress === 100) {
                     rowData.progress = 90;
@@ -359,7 +476,7 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
           }
         } else {
           await saveProject(rowData);
-          if (key === "priority") {
+          if (key === "priority" || key === "status") {
               const refreshed = await fetch("/projects");
               const refreshedProjects = await refreshed.json();
               projects.length = 0;
@@ -381,9 +498,7 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
 
       // Re-render tables to reflect changes
       renderAllTables();
-      if (isTask) {
-        showNestedTable(projectId);
-      }
+      showNestedTable(projectId);
 
       requestAnimationFrame(() => {
         restoreNestedScrollPositions(savedScrollPositions);
@@ -413,25 +528,26 @@ function createProjectRow(project) {
   tr.dataset.projectId = project.id;
   tr.classList.add("project-row");
 
-  // Toggle button cell to show/hide nested tasks
   const toggleTd = document.createElement("td");
   toggleTd.classList.add("toggle-btn-cell");
   const toggleBtn = document.createElement("button");
-  toggleBtn.textContent = "▸"; // collapsed arrow
+  toggleBtn.textContent = "▸";
   toggleBtn.classList.add("toggle-btn");
   toggleBtn.addEventListener("click", () => toggleNestedTable(project.id, toggleBtn));
   toggleTd.appendChild(toggleBtn);
   tr.appendChild(toggleTd);
 
-  // Editable cells for project fields
   tr.appendChild(createEditableCell(project, "projectName", false, project.id));
-  tr.appendChild(createEditableCell(project, "priority", false, project.id));
+
+  if (project.status === "On-going") {
+    tr.appendChild(createEditableCell(project, "priority", false, project.id));
+  }
+
   tr.appendChild(createEditableCell(project, "client", false, project.id));
   tr.appendChild(createEditableCell(project, "personInCharge", false, project.id));
   tr.appendChild(createEditableCell(project, "startDate", false, project.id));
   tr.appendChild(createEditableCell(project, "endDate", false, project.id));
 
-  // Progress — now read-only, auto-calculated
   const progressTd = document.createElement("td");
   progressTd.innerHTML = `
       <div class="progress-container">
@@ -443,7 +559,6 @@ function createProjectRow(project) {
 
   tr.appendChild(createEditableCell(project, "ongoingActions", false, project.id));
 
-  // Overdue tasks — now read-only, auto-calculated
   const overdueTd = document.createElement("td");
   if (project.pastDueTasks > 0) {
       overdueTd.innerHTML = `<span class="overdue-badge">${project.pastDueTasks}</span>`;
@@ -454,15 +569,19 @@ function createProjectRow(project) {
 
   tr.appendChild(createEditableCell(project, "status", false, project.id));
 
-  // Delete project button cell
-  const actionsTd = document.createElement("td");
-  actionsTd.classList.add("actions-cell");
-  const delBtn = document.createElement("button");
-  delBtn.textContent = "✖";
-  delBtn.classList.add("delete-btn");
-  delBtn.addEventListener("click", () => deleteProject(project.id));
-  actionsTd.appendChild(delBtn);
-  tr.appendChild(actionsTd);
+  // Only block kept — the conditional one
+  if (!isViewer) {
+    const actionsTd = document.createElement("td");
+    actionsTd.classList.add("actions-cell");
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "✖";
+    delBtn.classList.add("delete-btn");
+    delBtn.addEventListener("click", () => deleteProject(project.id));
+    actionsTd.appendChild(delBtn);
+    tr.appendChild(actionsTd);
+  } else {
+    tr.appendChild(document.createElement("td"));
+  }
 
   return tr;
 }
@@ -504,7 +623,7 @@ function createNestedTasksRow(project) {
         <option value="Done">Done</option>
       </select>
       <input type="text" class="task-text-filter" placeholder="Filter tasks by name or PIC..."/>
-      <button class="add-task-btn">+ Add Task</button>
+      ${isViewer ? "" : '<button class="add-task-btn">+ Add Task</button>'}
     </div>
   `;
   filterRow.appendChild(filterTd);
@@ -543,7 +662,7 @@ function createNestedTasksRow(project) {
   footerRow.classList.add("task-footer-row");
   const footerTd = document.createElement("td");
   footerTd.colSpan = 10;
-  footerTd.innerHTML = `<button class="add-task-btn add-task-btn-bottom">+ Add Task</button>`;
+  footerTd.innerHTML = isViewer ? "" : '<button class="add-task-btn add-task-btn-bottom">+ Add Task</button>';
   footerRow.appendChild(footerTd);
   tfoot.appendChild(footerRow);
   nestedTable.appendChild(tfoot);
@@ -579,7 +698,6 @@ function attachNestedTableEvents(table, project) {
   let sortKey = null;
   let sortDirection = "asc";
 
-  // Sorting on header click
   thead.querySelectorAll("th").forEach(th => {
     th.addEventListener("click", () => {
       const key = th.dataset.key;
@@ -597,7 +715,6 @@ function attachNestedTableEvents(table, project) {
     });
   });
 
-  // Filtering inputs
   const statusFilter = thead.querySelector(".task-status-filter");
   const textFilter = thead.querySelector(".task-text-filter");
   const addTaskBtn = thead.querySelector(".add-task-btn");
@@ -610,16 +727,19 @@ function attachNestedTableEvents(table, project) {
     renderTasks(project, tbody, sortKey, sortDirection, getNestedFilters(table));
   });
 
-  // Add new task button
-  addTaskBtn.addEventListener("click", () => {
-    addNewTask(project.id);
-  });
+  // Guard against missing buttons for viewers
+  if (addTaskBtn) {
+    addTaskBtn.addEventListener("click", () => {
+      addNewTask(project.id);
+    });
+  }
 
+  if (addTaskBtnBottom) {
     addTaskBtnBottom.addEventListener("click", () => {
-    addNewTask(project.id);
-  });
+      addNewTask(project.id);
+    });
+  }
 
-  // Initial render of tasks
   renderTasks(project, tbody, sortKey, sortDirection, getNestedFilters(table));
 }
 
@@ -682,7 +802,7 @@ function renderTasks(project, tbody, sortKey, sortDirection, filters) {
   if (filteredTasks.length === 0) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
-    td.colSpan = 9; // Number of columns in task table
+    td.colSpan = 10; // Number of columns in task table
     td.classList.add("empty-message");
 
     td.innerHTML = `
@@ -749,14 +869,18 @@ function renderTasks(project, tbody, sortKey, sortDirection, filters) {
     });
 
     // Delete task button cell
-    const actionsTd = document.createElement("td");
-    actionsTd.classList.add("actions-cell");
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "✖";
-    delBtn.classList.add("delete-btn");
-    delBtn.addEventListener("click", () => deleteTask(project.id, task.id));
-    actionsTd.appendChild(delBtn);
-    tr.appendChild(actionsTd);
+    if (!isViewer) {
+      const actionsTd = document.createElement("td");
+      actionsTd.classList.add("actions-cell");
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "✖";
+      delBtn.classList.add("delete-btn");
+      delBtn.addEventListener("click", () => deleteTask(project.id, task.id));
+      actionsTd.appendChild(delBtn);
+      tr.appendChild(actionsTd);
+    } else {
+      tr.appendChild(document.createElement("td")); // empty cell to keep column alignment
+    }
 
     tbody.appendChild(tr);
   });
@@ -925,16 +1049,14 @@ function showNestedTable(projectId) {
  */
 function renderAllTables() {
   const savedScrollPositions = captureNestedScrollPositions();
+  const openProjectIds = captureOpenNestedTables();
 
-  // Clear all project tables
   ["onGoingTable", "doneTable", "holdCloseTable"].forEach(id => {
     document.querySelector(`#${id} tbody`).innerHTML = "";
   });
 
-  // Get project filter text
   const filterText = document.getElementById("filterInput").value.trim().toLowerCase();
 
-  // Filter projects by name or client
   let filteredProjects = projects.filter(p => {
     if (filterText) {
       return (
@@ -945,33 +1067,43 @@ function renderAllTables() {
     return true;
   });
 
-  // Sort projects by priority
-  filteredProjects.sort((a, b) => {
-      const pa = a.priority ?? 0;
-      const pb = b.priority ?? 0;
+  // Split by status first
+  const onGoing = filteredProjects.filter(p => p.status === "On-going");
+  const done = filteredProjects.filter(p => p.status === "Done");
+  const hold = filteredProjects.filter(p => p.status === "Hold");
 
-      if (pa === 0 && pb === 0) return 0; // multiple unranked stay in whatever order
-      if (pa === 0) return -1;
-      if (pb === 0) return 1;
+  // Only On-going sorts by priority (0 = unranked, shown first)
+  onGoing.sort((a, b) => {
+    const pa = a.priority ?? 0;
+    const pb = b.priority ?? 0;
 
-      return pa - pb;
+    if (pa === 0 && pb === 0) return 0;
+    if (pa === 0) return -1;
+    if (pb === 0) return 1;
+
+    return pa - pb;
   });
 
-  // Append projects and nested tasks to appropriate tables by status
-  filteredProjects.forEach(project => {
+  // Done and Hold sort alphabetically, priority irrelevant
+  done.sort((a, b) => a.projectName.localeCompare(b.projectName));
+  hold.sort((a, b) => a.projectName.localeCompare(b.projectName));
+
+  onGoing.forEach(project => {
     const projectRow = createProjectRow(project);
     const nestedRow = createNestedTasksRow(project);
-
-    if (project.status === "On-going") {
-      document.querySelector("#onGoingTable tbody").appendChild(projectRow);
-      document.querySelector("#onGoingTable tbody").appendChild(nestedRow);
-    } else if (project.status === "Done") {
-      document.querySelector("#doneTable tbody").appendChild(projectRow);
-    } else if (project.status === "Hold") {
-      document.querySelector("#holdCloseTable tbody").appendChild(projectRow);
-    }
+    document.querySelector("#onGoingTable tbody").appendChild(projectRow);
+    document.querySelector("#onGoingTable tbody").appendChild(nestedRow);
   });
 
+  done.forEach(project => {
+    document.querySelector("#doneTable tbody").appendChild(createProjectRow(project));
+  });
+
+  hold.forEach(project => {
+    document.querySelector("#holdCloseTable tbody").appendChild(createProjectRow(project));
+  });
+
+  restoreOpenNestedTables(openProjectIds);
   restoreNestedScrollPositions(savedScrollPositions);
 }
 
@@ -1046,6 +1178,14 @@ document.querySelectorAll(".toggle-section-btn").forEach(btn => {
   }
 });
 
+// Hide Functions Buttons if user is viewer
+if (isViewer) {
+  document.getElementById("addProjectBtn").style.display = "none";
+  document.getElementById("importXLSX").style.display = "none";
+  document.getElementById("exportCalendarBtn").style.display = "none";
+  document.getElementById("createMOMBtn").style.display = "none";
+  // exportXLSX stays visible since it's read-only
+}
 
 async function recalculateAllProjects() {
     for (const project of projects) {

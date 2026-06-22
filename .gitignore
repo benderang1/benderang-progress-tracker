@@ -15,5 +15,7 @@ node_modules/
 create-admin.js
 generate-hash.js
 insert-data.js
+temp.js
+test-calendar.js
 
 ..gitignore.swp

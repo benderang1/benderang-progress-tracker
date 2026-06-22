@@ -1,16 +1,30 @@
 // Load environment variables from .env file into process.env
 require("dotenv").config();
 
-const ExcelJS = require("exceljs");
 const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
 const sqlite3 = require("sqlite3").verbose();
+const ExcelJS = require("exceljs");
 const calendar = require("./calendar");
 const ics = require("ics");
 const nodemailer = require("nodemailer");
 
 const app = express();
+
+const http = require("http");
+const { Server } = require("socket.io");
+
+const server = http.createServer(app);
+const io = new Server(server);
+
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("A user disconnected:", socket.id);
+  });
+});
 
 // Configure nodemailer transporter for Gmail using app password from env
 const transporter = nodemailer.createTransport({
@@ -66,8 +80,10 @@ async function sendCalendarInvite(task, attendeeEmails) {
   await transporter.sendMail({
     from: `"Benderang Project Tracker" <admengineering.benderang@gmail.com>`,
     to: attendeeEmails.join(", "),
-    subject: `[Task Invitation] ${task.projectName} — ${task.task}`,
-    text: `You have been invited to a task due on ${day}-${month}-${year}.\n\nProject: ${task.projectName}\nTask: ${task.task}\nClient: ${task.client}\nDue: ${day}-${month}-${year}\nNotes: ${task.comments || "-"}\n\nPlease accept the calendar invitation attached.`,
+    subject: `[Task Assignment] ${task.projectName} — ${task.task}`,
+    text: `Your task is due on ${day}-${month}-${year}.\n\n
+    Project: ${task.projectName}\nTask: ${task.task}\nClient: ${task.client}\nDue: ${day}-${month}-${year}\n
+    Notes: ${task.comments || "-"}\n\nPlease accept the calendar invitation attached.`,
     icalEvent: {
       filename: "invite.ics",
       method: "REQUEST",
@@ -102,6 +118,16 @@ function requireAdmin(req, res, next) {
 }
 
 /**
+ * Middleware to block viewers from write operations (CRUD, exports that modify data)
+ */
+function blockViewer(req, res, next) {
+  if (req.session.role === "viewer") {
+    return res.status(403).json({ error: "Viewers cannot perform this action" });
+  }
+  next();
+}
+
+/**
  * Write an action log entry to the database
  * @param {sqlite3.Database} db - SQLite database instance
  * @param {string} username - Username performing the action
@@ -122,84 +148,97 @@ function writeLog(db, username, action, entityType, entityId, entityName, detail
   );
 }
 
+/**
+ * Reassign priority for a project by moving it to newPriority position,
+ * then re-sequencing ALL on-going projects to be gapless (1, 2, 3...N)
+ * @param {sqlite3.Database} db - SQLite database instance
+ * @param {number} projectId - ID of the project being changed
+ * @param {number} newPriority - Desired new priority position (0 = unranked)
+ * @returns {Promise<void>}
+ */
 function reassignPriority(db, projectId, newPriority) {
   return new Promise((resolve, reject) => {
 
-    db.get(
-        "SELECT priority FROM projects WHERE id = ?",
-        [projectId],
-        (err, row) => {
-            if (err) return reject(err);
+    // Get ALL on-going projects ordered by their current priority
+    db.all(
+      `
+      SELECT id, priority
+      FROM projects
+      WHERE status = 'On-going'
+      ORDER BY
+        CASE WHEN priority = 0 OR priority IS NULL THEN 999999 ELSE priority END ASC,
+        id ASC
+      `,
+      [],
+      (err, rows) => {
+        if (err) return reject(err);
 
-            const oldPriority = row ? row.priority : null;
-
-            if (oldPriority === newPriority) {
-                return resolve();
-            }
-
-            db.serialize(() => {
-                db.run("BEGIN TRANSACTION");
-
-                // Moving INTO ranked territory (newPriority >= 1)
-                if (newPriority >= 1) {
-
-                    if (oldPriority === null || oldPriority === 0 || newPriority < oldPriority) {
-                        // Coming from unranked (0) or moving up: shift everyone at/after newPriority down by 1
-                        db.run(
-                            `
-                            UPDATE projects
-                            SET priority = priority + 1
-                            WHERE priority >= ?
-                              AND priority >= 1
-                              AND id <> ?
-                            `,
-                            [newPriority, projectId]
-                        );
-                    } else {
-                        // Moving down within ranked territory
-                        db.run(
-                            `
-                            UPDATE projects
-                            SET priority = priority - 1
-                            WHERE priority > ?
-                              AND priority <= ?
-                              AND id <> ?
-                            `,
-                            [oldPriority, newPriority, projectId]
-                        );
-                    }
-                }
-                else {
-                    // Moving back to unranked (0): close the gap left behind in ranked territory
-                    if (oldPriority !== null && oldPriority >= 1) {
-                        db.run(
-                            `
-                            UPDATE projects
-                            SET priority = priority - 1
-                            WHERE priority > ?
-                              AND id <> ?
-                            `,
-                            [oldPriority, projectId]
-                        );
-                    }
-                }
-
-                db.run(
-                    "UPDATE projects SET priority = ? WHERE id = ?",
-                    [newPriority, projectId],
-                    (err) => {
-                        if (err) {
-                            db.run("ROLLBACK");
-                            return reject(err);
-                        }
-                        db.run("COMMIT", (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                    }
-                );
-            });
+        // Separate the moving project out of the list
+        const movingIndex = rows.findIndex(r => r.id === parseInt(projectId));
+        if (movingIndex === -1) {
+          // Project not found in on-going list (shouldn't normally happen), just resolve
+          return resolve();
         }
+
+        const movingProject = rows.splice(movingIndex, 1)[0];
+
+        if (newPriority === 0) {
+          // Moving to unranked: just put it at the end of the ranked list conceptually,
+          // it will get priority 0 explicitly, everyone else re-sequences 1..N-1
+          db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+
+            rows.forEach((row, index) => {
+              db.run(
+                "UPDATE projects SET priority = ? WHERE id = ?",
+                [index + 1, row.id]
+              );
+            });
+
+            db.run(
+              "UPDATE projects SET priority = 0 WHERE id = ?",
+              [movingProject.id],
+              (err) => {
+                if (err) {
+                  db.run("ROLLBACK");
+                  return reject(err);
+                }
+                db.run("COMMIT", (err) => {
+                  if (err) return reject(err);
+                  resolve();
+                });
+              }
+            );
+          });
+          return;
+        }
+
+        // Clamp newPriority to a valid range (1 to rows.length + 1)
+        const clampedPriority = Math.max(1, Math.min(newPriority, rows.length + 1));
+
+        // Insert the moving project back into the list at the clamped position
+        rows.splice(clampedPriority - 1, 0, movingProject);
+
+        // Re-sequence everyone, gapless, 1-indexed
+        db.serialize(() => {
+          db.run("BEGIN TRANSACTION");
+
+          rows.forEach((row, index) => {
+            db.run(
+              "UPDATE projects SET priority = ? WHERE id = ?",
+              [index + 1, row.id]
+            );
+          });
+
+          db.run("COMMIT", (err) => {
+            if (err) {
+              db.run("ROLLBACK");
+              return reject(err);
+            }
+            resolve();
+          });
+        });
+      }
     );
   });
 }
@@ -285,6 +324,24 @@ app.get("/logs", requireAdmin, (req, res) => {
   });
 });
 
+
+app.get("/projects/ongoing-count", requireLogin, blockViewer, (req, res) => {
+  const db = new sqlite3.Database("./database/tracker.db");
+
+  db.get(
+    "SELECT COUNT(*) AS count FROM projects WHERE status = 'On-going'",
+    [],
+    (err, row) => {
+      if (err) {
+        console.error("SQLite error:", err.message);
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ count: row.count });
+    }
+  );
+});
+
+
 /**
  * GET /export-excel - Export projects and tasks to Excel file
  * Requires login
@@ -304,6 +361,7 @@ app.get("/export-excel", requireLogin, (req, res) => {
       const projectsSheet = workbook.addWorksheet("Projects");
       projectsSheet.columns = [
         { header: "Project Name", key: "projectName", width: 30 },
+        { header: "Priority", key: "priority", width: 12 },
         { header: "Client", key: "client", width: 20 },
         { header: "PIC", key: "personInCharge", width: 20 },
         { header: "Start Date", key: "startDate", width: 15 },
@@ -318,6 +376,7 @@ app.get("/export-excel", requireLogin, (req, res) => {
       projects.forEach(project => {
         projectsSheet.addRow({
           projectName: project.projectName,
+          priority: project.status === "On-going" ? (project.priority ?? 0) : "",
           client: project.client,
           personInCharge: project.personInCharge,
           startDate: project.startDate,
@@ -335,7 +394,7 @@ app.get("/export-excel", requireLogin, (req, res) => {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "4285F4" } };
       });
       projectsSheet.views = [{ state: "frozen", ySplit: 1 }];
-      projectsSheet.autoFilter = { from: "A1", to: "I1" };
+      projectsSheet.autoFilter = { from: "A1", to: "J1" };
 
       // Create individual sheets for each project's tasks
       projects.forEach(project => {
@@ -366,7 +425,7 @@ app.get("/export-excel", requireLogin, (req, res) => {
             startDate: task.startDate,
             dueDate: task.dueDate,
             completionDate: task.completionDate || "",
-            percentage: task.percentage || 0,
+            percentage: task.progress || 0,
             comments: task.comments,
             status: task.status,
           });
@@ -461,7 +520,7 @@ async function batchProcess(tasks, db, batchSize = 5) {
             await calendar.events.update({
               calendarId: "admengineering.benderang@gmail.com",
               eventId: task.eventId,
-              sendUpdates: "all",
+              // sendUpdates: "all", --> this is native google calendar invitation sender. Commented out because nodemailer already send invites. 
               requestBody: eventBody,
             });
           } catch (updateErr) {
@@ -469,7 +528,7 @@ async function batchProcess(tasks, db, batchSize = 5) {
               // Event not found, create new
               const created = await calendar.events.insert({
                 calendarId: "admengineering.benderang@gmail.com",
-                sendUpdates: "all",
+                // sendUpdates: "all", --> this is native google calendar invitation sender. Commented out because nodemailer already send invites.
                 requestBody: eventBody,
               });
               isNewEvent = true;
@@ -488,7 +547,7 @@ async function batchProcess(tasks, db, batchSize = 5) {
           // No eventId, create new event
           const created = await calendar.events.insert({
             calendarId: "admengineering.benderang@gmail.com",
-            sendUpdates: "all",
+            // sendUpdates: "all", --> this is native google calendar invitation sender. Commented out because nodemailer already send invites. 
             requestBody: eventBody,
           });
           isNewEvent = true;
@@ -520,7 +579,7 @@ async function batchProcess(tasks, db, batchSize = 5) {
  * POST /export-calendar - Sync tasks to Google Calendar and send invites
  * Requires login
  */
-app.post("/export-calendar", requireLogin, async (req, res) => {
+app.post("/export-calendar", requireLogin, blockViewer, async (req, res) => {
   try {
     const db = new sqlite3.Database("./database/tracker.db");
 
@@ -604,7 +663,7 @@ app.post("/logout", (req, res) => {
  * POST /projects - Create new project
  * Requires login
  */
-app.post("/projects", requireLogin, (req, res) => {
+app.post("/projects", requireLogin, blockViewer, (req, res) => {
   const p = req.body;
   const db = new sqlite3.Database("./database/tracker.db");
 
@@ -634,6 +693,7 @@ app.post("/projects", requireLogin, (req, res) => {
 
       res.json({ id: this.lastID, priority: 0 });
       writeLog(db, req.session.username, "CREATE", "project", this.lastID, p.projectName);
+      io.emit("projectCreated", { ...p, id: this.lastID, priority: 0, tasks: [] });
     }
   );
 });
@@ -642,7 +702,7 @@ app.post("/projects", requireLogin, (req, res) => {
  * POST /projects/:id/tasks - Create new task under project
  * Requires login
  */
-app.post("/projects/:id/tasks", requireLogin, (req, res) => {
+app.post("/projects/:id/tasks", requireLogin, blockViewer, (req, res) => {
   const task = req.body;
   const db = new sqlite3.Database("./database/tracker.db");
 
@@ -671,6 +731,7 @@ app.post("/projects/:id/tasks", requireLogin, (req, res) => {
 
       res.json({ id: this.lastID });
       writeLog(db, req.session.username, "CREATE", "task", this.lastID, task.task);
+      io.emit("taskCreated", { ...task, id: this.lastID, project_id: req.params.id });
     }
   );
 });
@@ -679,25 +740,58 @@ app.post("/projects/:id/tasks", requireLogin, (req, res) => {
  * PUT /projects/:id - Update project by ID
  * Requires login
  */
-app.put("/projects/:id", requireLogin, async (req, res) => {
+app.put("/projects/:id", requireLogin, blockViewer, async (req, res) => {
   const projectId = req.params.id;
   const project = req.body;
   const db = new sqlite3.Database("./database/tracker.db");
 
   try {
-    // Handle priority reassignment first if priority is being changed
-    if (project.priority !== undefined && project.priority !== null) {
+    // Check the project's current status before updating
+    const currentRow = await new Promise((resolve, reject) => {
+      db.get(
+        "SELECT status, priority FROM projects WHERE id = ?",
+        [projectId],
+        (err, row) => err ? reject(err) : resolve(row)
+      );
+    });
+
+    const wasOnGoing = currentRow && currentRow.status === "On-going";
+    const isNowOnGoing = project.status === "On-going";
+
+    // Moving AWAY from On-going: reset priority to 0 and close the gap
+    if (wasOnGoing && !isNowOnGoing) {
+      const oldPriority = currentRow.priority;
+
+      if (oldPriority !== null && oldPriority >= 1) {
+        await new Promise((resolve, reject) => {
+          db.run(
+            "UPDATE projects SET priority = priority - 1 WHERE priority > ?",
+            [oldPriority],
+            err => err ? reject(err) : resolve()
+          );
+        });
+      }
+
+      project.priority = 0;
+    }
+    // Moving INTO On-going (e.g. from Done/Hold back to On-going): starts unranked at 0
+    else if (!wasOnGoing && isNowOnGoing) {
+      project.priority = 0;
+    }
+    // Staying On-going, and priority is explicitly being changed
+    else if (isNowOnGoing && project.priority !== undefined && project.priority !== null) {
       await reassignPriority(db, projectId, parseInt(project.priority));
     }
 
     db.run(
       `
       UPDATE projects
-      SET projectName = ?, client = ?, personInCharge = ?, startDate = ?, endDate = ?, progress = ?, ongoingActions = ?, pastDueTasks = ?, status = ?
+      SET projectName = ?, priority = ?, client = ?, personInCharge = ?, startDate = ?, endDate = ?, progress = ?, ongoingActions = ?, pastDueTasks = ?, status = ?
       WHERE id = ?
       `,
       [
         project.projectName,
+        project.priority ?? currentRow.priority,
         project.client,
         project.personInCharge,
         project.startDate,
@@ -716,6 +810,8 @@ app.put("/projects/:id", requireLogin, async (req, res) => {
 
         res.json({ success: true });
         writeLog(db, req.session.username, "UPDATE", "project", projectId, project.projectName);
+        io.emit("projectsNeedRefresh");
+        io.emit("projectUpdated", { projectId, project: { ...project, priority: project.priority ?? currentRow.priority } });
       }
     );
   }
@@ -729,7 +825,7 @@ app.put("/projects/:id", requireLogin, async (req, res) => {
  * PUT /tasks/:id - Update task by ID
  * Requires login
  */
-app.put("/tasks/:id", requireLogin, (req, res) => {
+app.put("/tasks/:id", requireLogin, blockViewer, (req, res) => {
   const taskId = req.params.id;
   const task = req.body;
   const db = new sqlite3.Database("./database/tracker.db");
@@ -759,6 +855,7 @@ app.put("/tasks/:id", requireLogin, (req, res) => {
 
       res.json({ success: true });
       writeLog(db, req.session.username, "UPDATE", "task", taskId, task.task);
+      io.emit("taskUpdated", { taskId, task });
     }
   );
 });
@@ -767,7 +864,7 @@ app.put("/tasks/:id", requireLogin, (req, res) => {
  * DELETE /projects/:id - Delete project by ID
  * Requires login
  */
-app.delete("/projects/:id", requireLogin, (req, res) => {
+app.delete("/projects/:id", requireLogin, blockViewer, (req, res) => {
   const db = new sqlite3.Database("./database/tracker.db");
 
   db.get(
@@ -797,6 +894,7 @@ app.delete("/projects/:id", requireLogin, (req, res) => {
 
         res.json({ success: true });
         writeLog(db, req.session.username, "DELETE", "project", req.params.id, "");
+        io.emit("projectDeleted", { projectId: req.params.id });
       });
     }
   );
@@ -806,7 +904,7 @@ app.delete("/projects/:id", requireLogin, (req, res) => {
  * DELETE /tasks/:id - Delete task by ID
  * Requires login
  */
-app.delete("/tasks/:id", requireLogin, (req, res) => {
+app.delete("/tasks/:id", requireLogin, blockViewer, (req, res) => {
   const db = new sqlite3.Database("./database/tracker.db");
 
   db.run("DELETE FROM tasks WHERE id = ?", [req.params.id], function (err) {
@@ -817,6 +915,7 @@ app.delete("/tasks/:id", requireLogin, (req, res) => {
 
     res.json({ success: true });
     writeLog(db, req.session.username, "DELETE", "task", req.params.id, "");
+    io.emit("taskDeleted", { taskId: req.params.id });
   });
 });
 
@@ -836,6 +935,6 @@ app.delete("/logs", requireAdmin, (req, res) => {
 
 // Start server on configured port or default 5050
 const PORT = process.env.PORT || 5050;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
