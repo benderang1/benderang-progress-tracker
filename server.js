@@ -81,9 +81,7 @@ async function sendCalendarInvite(task, attendeeEmails) {
     from: `"Benderang Project Tracker" <admengineering.benderang@gmail.com>`,
     to: attendeeEmails.join(", "),
     subject: `[Task Assignment] ${task.projectName} — ${task.task}`,
-    text: `Your task is due on ${day}-${month}-${year}.\n\n
-    Project: ${task.projectName}\nTask: ${task.task}\nClient: ${task.client}\nDue: ${day}-${month}-${year}\n
-    Notes: ${task.comments || "-"}\n\nPlease accept the calendar invitation attached.`,
+    text: `Your task is due on ${day}-${month}-${year}.\n\nProject: ${task.projectName}\nTask: ${task.task}\nClient: ${task.client}\nDue: ${day}-${month}-${year}\nNotes: ${task.comments || "-"}\n\nPlease accept the calendar invitation attached.`,
     icalEvent: {
       filename: "invite.ics",
       method: "REQUEST",
