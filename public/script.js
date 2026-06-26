@@ -22,58 +22,58 @@ let projects = await projectsResponse.json();
 const socket = io();
 
 socket.on("taskUpdated", ({ taskId, task }) => {
-    const project = projects.find(p => p.tasks.some(t => t.id == taskId));
-    if (!project) return;
+  const project = projects.find((p) => p.tasks.some((t) => t.id == taskId));
+  if (!project) return;
 
-    const taskIndex = project.tasks.findIndex(t => t.id == taskId);
-    if (taskIndex === -1) return;
+  const taskIndex = project.tasks.findIndex((t) => t.id == taskId);
+  if (taskIndex === -1) return;
 
-    project.tasks[taskIndex] = { ...project.tasks[taskIndex], ...task };
+  project.tasks[taskIndex] = { ...project.tasks[taskIndex], ...task };
 
-    syncProjectCalculations(project).then(() => renderAllTables());
+  syncProjectCalculations(project).then(() => renderAllTables());
 });
 
 socket.on("taskCreated", (newTask) => {
-    const project = projects.find(p => p.id == newTask.project_id);
-    if (!project) return;
-    if (project.tasks.some(t => t.id === newTask.id)) return; // avoid dup if same client triggered it
+  const project = projects.find((p) => p.id == newTask.project_id);
+  if (!project) return;
+  if (project.tasks.some((t) => t.id === newTask.id)) return; // avoid dup if same client triggered it
 
-    project.tasks.push(newTask);
-    renderAllTables();
+  project.tasks.push(newTask);
+  renderAllTables();
 });
 
 socket.on("taskDeleted", ({ taskId }) => {
-    projects.forEach(p => {
-        p.tasks = p.tasks.filter(t => t.id != taskId);
-    });
-    renderAllTables();
+  projects.forEach((p) => {
+    p.tasks = p.tasks.filter((t) => t.id != taskId);
+  });
+  renderAllTables();
 });
 
 socket.on("projectCreated", (newProject) => {
-    if (projects.some(p => p.id === newProject.id)) return;
-    projects.push(newProject);
-    refreshProjectNumbers();
-    renderAllTables();
+  if (projects.some((p) => p.id === newProject.id)) return;
+  projects.push(newProject);
+  refreshProjectNumbers();
+  renderAllTables();
 });
 
 socket.on("projectUpdated", ({ projectId, project: updatedProject }) => {
-    const index = projects.findIndex(p => p.id == projectId);
-    if (index === -1) return;
+  const index = projects.findIndex((p) => p.id == projectId);
+  if (index === -1) return;
 
-    projects[index] = { ...projects[index], ...updatedProject };
-    renderAllTables();
+  projects[index] = { ...projects[index], ...updatedProject };
+  renderAllTables();
 });
 
 socket.on("projectDeleted", ({ projectId }) => {
-    projects = projects.filter(p => p.id != projectId);
-    refreshProjectNumbers();
-    renderAllTables();
+  projects = projects.filter((p) => p.id != projectId);
+  refreshProjectNumbers();
+  renderAllTables();
 });
 
 socket.on("projectsNeedRefresh", async () => {
-    const refreshed = await fetch("/projects");
-    projects = await refreshed.json();
-    renderAllTables();
+  const refreshed = await fetch("/projects");
+  projects = await refreshed.json();
+  renderAllTables();
 });
 
 // Socket IO Listeners End
@@ -111,59 +111,61 @@ async function saveTask(task) {
 }
 
 function calculateProjectProgress(project) {
-    if (!project.tasks || project.tasks.length === 0) {
-        return project.progress || 0; // keep manual value if no tasks
-    }
+  if (!project.tasks || project.tasks.length === 0) {
+    return project.progress || 0; // keep manual value if no tasks
+  }
 
-    const total = project.tasks.reduce((sum, task) => sum + (parseInt(task.progress) || 0), 0);
-    return Math.round(total / project.tasks.length);
+  const total = project.tasks.reduce(
+    (sum, task) => sum + (parseInt(task.progress) || 0),
+    0,
+  );
+  return Math.round(total / project.tasks.length);
 }
 
 function isTaskOverdue(task) {
-    if (task.status === "Done") return false;
-    if (!task.dueDate) return false;
+  if (task.status === "Done") return false;
+  if (!task.dueDate) return false;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    const due = new Date(task.dueDate);
-    due.setHours(0, 0, 0, 0);
+  const due = new Date(task.dueDate);
+  due.setHours(0, 0, 0, 0);
 
-    return due < today;
+  return due < today;
 }
 
 function calculateOverdueTasks(project) {
-    if (!project.tasks || project.tasks.length === 0) {
-        return 0;
-    }
+  if (!project.tasks || project.tasks.length === 0) {
+    return 0;
+  }
 
-    return project.tasks.filter(task => isTaskOverdue(task)).length;
+  return project.tasks.filter((task) => isTaskOverdue(task)).length;
 }
 
 async function syncProjectCalculations(project) {
-    const newProgress = calculateProjectProgress(project);
-    const newOverdue = calculateOverdueTasks(project);
+  const newProgress = calculateProjectProgress(project);
+  const newOverdue = calculateOverdueTasks(project);
 
-    let changed = false;
+  let changed = false;
 
-    if (project.progress !== newProgress) {
-        project.progress = newProgress;
-        changed = true;
+  if (project.progress !== newProgress) {
+    project.progress = newProgress;
+    changed = true;
+  }
+
+  if (project.pastDueTasks !== newOverdue) {
+    project.pastDueTasks = newOverdue;
+    changed = true;
+  }
+
+  if (changed) {
+    try {
+      await saveProject(project);
+    } catch (err) {
+      console.error("Failed to sync project calculations:", err);
     }
-
-    if (project.pastDueTasks !== newOverdue) {
-        project.pastDueTasks = newOverdue;
-        changed = true;
-    }
-
-    if (changed) {
-        try {
-            await saveProject(project);
-        }
-        catch (err) {
-            console.error("Failed to sync project calculations:", err);
-        }
-    }
+  }
 }
 
 /**
@@ -211,7 +213,7 @@ async function createTask(projectId, task) {
  */
 function captureOpenNestedTables() {
   const openProjectIds = new Set();
-  document.querySelectorAll(".nested-tasks-row").forEach(row => {
+  document.querySelectorAll(".nested-tasks-row").forEach((row) => {
     if (!row.classList.contains("hidden")) {
       openProjectIds.add(row.dataset.projectId);
     }
@@ -224,7 +226,7 @@ function captureOpenNestedTables() {
  * @param {Set<string>} openProjectIds - Set of projectIds that were open before re-render
  */
 function restoreOpenNestedTables(openProjectIds) {
-  openProjectIds.forEach(projectId => {
+  openProjectIds.forEach((projectId) => {
     showNestedTable(projectId);
   });
 }
@@ -235,7 +237,7 @@ function restoreOpenNestedTables(openProjectIds) {
  */
 function captureNestedScrollPositions() {
   const positions = {};
-  document.querySelectorAll(".nested-tasks-row").forEach(row => {
+  document.querySelectorAll(".nested-tasks-row").forEach((row) => {
     const wrapper = row.querySelector(".nested-table-scroll-wrapper");
     if (wrapper) {
       positions[row.dataset.projectId] = wrapper.scrollTop;
@@ -249,7 +251,7 @@ function captureNestedScrollPositions() {
  * @param {Object} positions - Map of projectId -> scrollTop
  */
 function restoreNestedScrollPositions(positions) {
-  document.querySelectorAll(".nested-tasks-row").forEach(row => {
+  document.querySelectorAll(".nested-tasks-row").forEach((row) => {
     const wrapper = row.querySelector(".nested-table-scroll-wrapper");
     const saved = positions[row.dataset.projectId];
     if (wrapper && saved) {
@@ -267,16 +269,26 @@ function formatDate(dateStr) {
   if (!dateStr) return "";
   const [year, month, day] = dateStr.split("-");
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   return `${day} ${months[+month - 1]} ${year}`;
 }
 
 // Calculate project counts by status
-const onGoingProjects = projects.filter(p => p.status === "On-going");
-const finishedProjects = projects.filter(p => p.status === "Done");
-const holdProjects = projects.filter(p => p.status === "Hold");
+const onGoingProjects = projects.filter((p) => p.status === "On-going");
+const finishedProjects = projects.filter((p) => p.status === "Done");
+const holdProjects = projects.filter((p) => p.status === "Hold");
 
 /**
  * Update project counts displayed in UI
@@ -297,7 +309,13 @@ function refreshProjectNumbers() {
  * @param {string|null} taskId - Task ID (for tasks)
  * @returns {HTMLElement} Table cell element
  */
-function createEditableCell(rowData, key, isTask = false, projectId = null, taskId = null) {
+function createEditableCell(
+  rowData,
+  key,
+  isTask = false,
+  projectId = null,
+  taskId = null,
+) {
   const td = document.createElement("td");
   td.classList.add("editable");
 
@@ -305,7 +323,7 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
   function createInput(value) {
     if (key === "status") {
       const select = document.createElement("select");
-      ["On-going", "Hold", "Done"].forEach(opt => {
+      ["On-going", "Hold", "Done"].forEach((opt) => {
         const option = document.createElement("option");
         option.value = opt;
         option.textContent = opt;
@@ -313,13 +331,15 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
         select.appendChild(option);
 
         select.addEventListener("change", () => {
-        if (select.value === "Done" && isTask) {
+          if (select.value === "Done" && isTask) {
             rowData.completionDate = new Date().toISOString().split("T")[0];
-        }
-    });
+          }
+        });
       });
       return select;
-    } else if (["startDate", "endDate", "dueDate", "completionDate"].includes(key)) {
+    } else if (
+      ["startDate", "endDate", "dueDate", "completionDate"].includes(key)
+    ) {
       const input = document.createElement("input");
       input.type = "date";
       input.value = value || "";
@@ -334,7 +354,9 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
       const input = document.createElement("input");
       input.type = "number";
 
-      const onGoingCount = projects.filter(p => p.status === "On-going").length;
+      const onGoingCount = projects.filter(
+        (p) => p.status === "On-going",
+      ).length;
 
       input.min = 0;
       input.max = onGoingCount;
@@ -350,7 +372,8 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
 
   // For progress field, show progress bar instead of plain text
   if (key === "progress") {
-    const overdueClass = (isTask && isTaskOverdue(rowData)) ? "progress-fill-overdue" : "";
+    const overdueClass =
+      isTask && isTaskOverdue(rowData) ? "progress-fill-overdue" : "";
     td.innerHTML = `
       <div class="progress-container">
         <div class="progress-fill ${overdueClass}" style="width:${rowData[key]}%"></div>
@@ -359,11 +382,12 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
     `;
   } else {
     td.textContent =
-      (["startDate", "endDate", "dueDate", "completionDate"].includes(key) && rowData[key])
+      ["startDate", "endDate", "dueDate", "completionDate"].includes(key) &&
+      rowData[key]
         ? formatDate(rowData[key])
         : rowData[key] || "";
   }
-  
+
   // Make cells read only for viewers
   if (isViewer) {
     td.classList.remove("editable"); // remove hover/cursor styling too
@@ -396,8 +420,7 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
           const countResponse = await fetch("/projects/ongoing-count");
           const countData = await countResponse.json();
           onGoingCount = countData.count;
-        }
-        catch (err) {
+        } catch (err) {
           console.error("Failed to fetch on-going count:", err);
           alert("Could not verify priority range. Please try again.");
           td.textContent = rowData[key] || "";
@@ -405,7 +428,9 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
         }
 
         if (newValue < 0 || newValue > onGoingCount) {
-          alert(`Priority must be between 0 and ${onGoingCount} (current number of On-going projects).`);
+          alert(
+            `Priority must be between 0 and ${onGoingCount} (current number of On-going projects).`,
+          );
           td.textContent = rowData[key] || "";
           return;
         }
@@ -417,70 +442,59 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
       const savedScrollPositions = captureNestedScrollPositions();
 
       try {
-
         const today = new Date().toISOString().split("T")[0];
 
         if (key === "progress") {
-            if (newValue === 100) {
-                rowData.status = "Done";
-                rowData.completionDate = today;
-            }
-            else if (oldValue === 100 && newValue < 100) {
-                // Moving away from 100% undoes the Done state
-                if (rowData.status === "Done") {
-                    rowData.status = "On-going";
-                }
-
-                rowData.completionDate = "";
+          if (newValue === 100) {
+            rowData.status = "Done";
+            rowData.completionDate = today;
+          } else if (oldValue === 100 && newValue < 100) {
+            // Moving away from 100% undoes the Done state
+            if (rowData.status === "Done") {
+              rowData.status = "On-going";
             }
 
-        }
-        else if (key === "status") {
-
-            if (newValue === "Done") {
-                rowData.progress = 100;
-                rowData.completionDate = today;
+            rowData.completionDate = "";
+          }
+        } else if (key === "status") {
+          if (newValue === "Done") {
+            rowData.progress = 100;
+            rowData.completionDate = today;
+          } else if (oldValue === "Done") {
+            rowData.completionDate = "";
+            // Prevent non-Done tasks from staying at 100%
+            if (rowData.progress === 100) {
+              rowData.progress = 90;
             }
-            else if (oldValue === "Done") {
-                rowData.completionDate = "";
-                // Prevent non-Done tasks from staying at 100%
-                if (rowData.progress === 100) {
-                    rowData.progress = 90;
-                }
-            }
-
-        }
-        else if (key === "completionDate") {
-
-            if (newValue) {
-                rowData.status = "Done";
-                rowData.progress = 100;
-            }
-            else {
-                if (rowData.status === "Done") {
-                    rowData.status = "On-going";
-                }
-
-                if (rowData.progress === 100) {
-                    rowData.progress = 90;
-                }
+          }
+        } else if (key === "completionDate") {
+          if (newValue) {
+            rowData.status = "Done";
+            rowData.progress = 100;
+          } else {
+            if (rowData.status === "Done") {
+              rowData.status = "On-going";
             }
 
+            if (rowData.progress === 100) {
+              rowData.progress = 90;
+            }
+          }
         }
 
         if (isTask) {
           await saveTask(rowData);
-          const project = projects.find(p => p.id === projectId);
+          const project = projects.find((p) => p.id === projectId);
           if (project) {
-              await syncProjectCalculations(project);
+            await syncProjectCalculations(project);
           }
         } else {
           await saveProject(rowData);
           if (key === "priority" || key === "status") {
-              const refreshed = await fetch("/projects");
-              const refreshedProjects = await refreshed.json();
-              projects.length = 0;
-              projects.push(...refreshedProjects);
+            const refreshed = await fetch("/projects");
+            const refreshedProjects = await refreshed.json();
+            projects.length = 0;
+            projects.push(...refreshedProjects);
           }
         }
       } catch (err) {
@@ -492,7 +506,7 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
       }
 
       td.textContent =
-        (["startDate", "endDate", "dueDate"].includes(key) && newValue)
+        ["startDate", "endDate", "dueDate"].includes(key) && newValue
           ? formatDate(newValue)
           : newValue;
 
@@ -506,7 +520,7 @@ function createEditableCell(rowData, key, isTask = false, projectId = null, task
     }
 
     input.addEventListener("blur", saveEdit);
-    input.addEventListener("keydown", e => {
+    input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         input.blur();
       } else if (e.key === "Escape") {
@@ -533,7 +547,9 @@ function createProjectRow(project) {
   const toggleBtn = document.createElement("button");
   toggleBtn.textContent = "▸";
   toggleBtn.classList.add("toggle-btn");
-  toggleBtn.addEventListener("click", () => toggleNestedTable(project.id, toggleBtn));
+  toggleBtn.addEventListener("click", () =>
+    toggleNestedTable(project.id, toggleBtn),
+  );
   toggleTd.appendChild(toggleBtn);
   tr.appendChild(toggleTd);
 
@@ -544,7 +560,9 @@ function createProjectRow(project) {
   }
 
   tr.appendChild(createEditableCell(project, "client", false, project.id));
-  tr.appendChild(createEditableCell(project, "personInCharge", false, project.id));
+  tr.appendChild(
+    createEditableCell(project, "personInCharge", false, project.id),
+  );
   tr.appendChild(createEditableCell(project, "startDate", false, project.id));
   tr.appendChild(createEditableCell(project, "endDate", false, project.id));
 
@@ -557,13 +575,15 @@ function createProjectRow(project) {
   `;
   tr.appendChild(progressTd);
 
-  tr.appendChild(createEditableCell(project, "ongoingActions", false, project.id));
+  tr.appendChild(
+    createEditableCell(project, "ongoingActions", false, project.id),
+  );
 
   const overdueTd = document.createElement("td");
   if (project.pastDueTasks > 0) {
-      overdueTd.innerHTML = `<span class="overdue-badge">${project.pastDueTasks}</span>`;
+    overdueTd.innerHTML = `<span class="overdue-badge">${project.pastDueTasks}</span>`;
   } else {
-      overdueTd.innerHTML = `<span class="overdue-zero">0</span>`;
+    overdueTd.innerHTML = `<span class="overdue-zero">0</span>`;
   }
   tr.appendChild(overdueTd);
 
@@ -642,7 +662,7 @@ function createNestedTasksRow(project) {
     "Comments",
     "Status",
     "",
-  ].forEach(col => {
+  ].forEach((col) => {
     const th = document.createElement("th");
     th.textContent = col;
     th.style.cursor = "pointer";
@@ -662,7 +682,9 @@ function createNestedTasksRow(project) {
   footerRow.classList.add("task-footer-row");
   const footerTd = document.createElement("td");
   footerTd.colSpan = 10;
-  footerTd.innerHTML = isViewer ? "" : '<button class="add-task-btn add-task-btn-bottom">+ Add Task</button>';
+  footerTd.innerHTML = isViewer
+    ? ""
+    : '<button class="add-task-btn add-task-btn-bottom">+ Add Task</button>';
   footerRow.appendChild(footerTd);
   tfoot.appendChild(footerRow);
   nestedTable.appendChild(tfoot);
@@ -677,10 +699,14 @@ function createNestedTasksRow(project) {
   attachNestedTableEvents(nestedTable, project);
 
   requestAnimationFrame(() => {
-    const filterRowHeight = thead.querySelector(".task-filter-row td").offsetHeight;
-    nestedTable.querySelectorAll("thead tr:not(.task-filter-row) th").forEach(th => {
-      th.style.top = `${filterRowHeight}px`;
-    });
+    const filterRowHeight = thead.querySelector(
+      ".task-filter-row td",
+    ).offsetHeight;
+    nestedTable
+      .querySelectorAll("thead tr:not(.task-filter-row) th")
+      .forEach((th) => {
+        th.style.top = `${filterRowHeight}px`;
+      });
   });
 
   return tr;
@@ -698,7 +724,7 @@ function attachNestedTableEvents(table, project) {
   let sortKey = null;
   let sortDirection = "asc";
 
-  thead.querySelectorAll("th").forEach(th => {
+  thead.querySelectorAll("th").forEach((th) => {
     th.addEventListener("click", () => {
       const key = th.dataset.key;
       if (!key) return;
@@ -710,7 +736,13 @@ function attachNestedTableEvents(table, project) {
         sortDirection = "asc";
       }
 
-      renderTasks(project, tbody, sortKey, sortDirection, getNestedFilters(table));
+      renderTasks(
+        project,
+        tbody,
+        sortKey,
+        sortDirection,
+        getNestedFilters(table),
+      );
       updateSortIndicators(thead, key, sortDirection);
     });
   });
@@ -721,10 +753,22 @@ function attachNestedTableEvents(table, project) {
   const addTaskBtnBottom = tfoot.querySelector(".add-task-btn-bottom");
 
   statusFilter.addEventListener("change", () => {
-    renderTasks(project, tbody, sortKey, sortDirection, getNestedFilters(table));
+    renderTasks(
+      project,
+      tbody,
+      sortKey,
+      sortDirection,
+      getNestedFilters(table),
+    );
   });
   textFilter.addEventListener("input", () => {
-    renderTasks(project, tbody, sortKey, sortDirection, getNestedFilters(table));
+    renderTasks(
+      project,
+      tbody,
+      sortKey,
+      sortDirection,
+      getNestedFilters(table),
+    );
   });
 
   // Guard against missing buttons for viewers
@@ -750,7 +794,10 @@ function attachNestedTableEvents(table, project) {
  */
 function getNestedFilters(table) {
   const statusFilter = table.querySelector(".task-status-filter").value;
-  const textFilter = table.querySelector(".task-text-filter").value.trim().toLowerCase();
+  const textFilter = table
+    .querySelector(".task-text-filter")
+    .value.trim()
+    .toLowerCase();
   return { statusFilter, textFilter };
 }
 
@@ -761,7 +808,7 @@ function getNestedFilters(table) {
  * @param {string} direction - "asc" or "desc"
  */
 function updateSortIndicators(thead, key, direction) {
-  thead.querySelectorAll("th").forEach(th => {
+  thead.querySelectorAll("th").forEach((th) => {
     th.classList.remove("sort-asc", "sort-desc");
     if (th.dataset.key === key) {
       th.classList.add(direction === "asc" ? "sort-asc" : "sort-desc");
@@ -781,8 +828,11 @@ function renderTasks(project, tbody, sortKey, sortDirection, filters) {
   tbody.innerHTML = "";
 
   // Filter tasks by status and text
-  let filteredTasks = project.tasks.filter(task => {
-    if (filters.statusFilter !== "all" && task.status !== filters.statusFilter) {
+  let filteredTasks = project.tasks.filter((task) => {
+    if (
+      filters.statusFilter !== "all" &&
+      task.status !== filters.statusFilter
+    ) {
       return false;
     }
 
@@ -846,7 +896,7 @@ function renderTasks(project, tbody, sortKey, sortDirection, filters) {
     tr.dataset.taskId = task.id;
 
     if (isTaskOverdue(task)) {
-        tr.classList.add("overdue-row");
+      tr.classList.add("overdue-row");
     }
 
     // Number cell
@@ -864,7 +914,7 @@ function renderTasks(project, tbody, sortKey, sortDirection, filters) {
       "progress",
       "comments",
       "status",
-    ].forEach(key => {
+    ].forEach((key) => {
       tr.appendChild(createEditableCell(task, key, true, project.id, task.id));
     });
 
@@ -894,13 +944,13 @@ function renderTasks(project, tbody, sortKey, sortDirection, filters) {
 async function deleteTask(projectId, taskId) {
   if (!confirm("Are you sure you want to delete this task?")) return;
 
-  const project = projects.find(p => p.id === projectId);
+  const project = projects.find((p) => p.id === projectId);
   if (!project) return;
 
   await fetch(`/tasks/${taskId}`, { method: "DELETE" });
 
-  project.tasks = project.tasks.filter(t => t.id !== taskId);
-  
+  project.tasks = project.tasks.filter((t) => t.id !== taskId);
+
   const savedScrollPositions = captureNestedScrollPositions();
 
   await syncProjectCalculations(project);
@@ -909,8 +959,8 @@ async function deleteTask(projectId, taskId) {
   showNestedTable(projectId);
 
   requestAnimationFrame(() => {
-      restoreNestedScrollPositions(savedScrollPositions);
-    });
+    restoreNestedScrollPositions(savedScrollPositions);
+  });
 }
 
 /**
@@ -918,11 +968,14 @@ async function deleteTask(projectId, taskId) {
  * @param {string} projectId - Project ID
  */
 async function deleteProject(projectId) {
-  if (!confirm("Are you sure you want to delete this project and all its tasks?")) return;
+  if (
+    !confirm("Are you sure you want to delete this project and all its tasks?")
+  )
+    return;
 
   await fetch(`/projects/${projectId}`, { method: "DELETE" });
 
-  projects = projects.filter(p => p.id !== projectId);
+  projects = projects.filter((p) => p.id !== projectId);
 
   refreshProjectNumbers();
   renderAllTables();
@@ -933,7 +986,7 @@ async function deleteProject(projectId) {
  * @param {string} projectId - Project ID
  */
 async function addNewTask(projectId) {
-  const project = projects.find(p => p.id === projectId);
+  const project = projects.find((p) => p.id === projectId);
   if (!project) return;
 
   const newTask = {
@@ -983,13 +1036,7 @@ document.getElementById("addProjectBtn").addEventListener("click", async () => {
   };
 
   try {
-    const result = await createProject(newProject);
-    newProject.id = result.id;
-    newProject.priority = result.priority;
-    newProject.tasks = [];
-    projects.push(newProject);
-
-    renderAllTables();
+    await createProject(newProject);
   } catch (err) {
     console.error(err);
     alert("Failed to create project");
@@ -1002,7 +1049,9 @@ document.getElementById("addProjectBtn").addEventListener("click", async () => {
  * @param {HTMLElement} btn - Toggle button element
  */
 function toggleNestedTable(projectId, btn) {
-  const nestedRow = document.querySelector(`tr.nested-tasks-row[data-project-id='${projectId}']`);
+  const nestedRow = document.querySelector(
+    `tr.nested-tasks-row[data-project-id='${projectId}']`,
+  );
   if (!nestedRow) return;
 
   if (nestedRow.classList.contains("hidden")) {
@@ -1012,9 +1061,11 @@ function toggleNestedTable(projectId, btn) {
     requestAnimationFrame(() => {
       const filterRowEl = nestedRow.querySelector(".task-filter-row td");
       const filterRowHeight = filterRowEl ? filterRowEl.offsetHeight : 0;
-      nestedRow.querySelectorAll("thead tr:not(.task-filter-row) th").forEach(th => {
-        th.style.top = `${filterRowHeight}px`;
-      });
+      nestedRow
+        .querySelectorAll("thead tr:not(.task-filter-row) th")
+        .forEach((th) => {
+          th.style.top = `${filterRowHeight}px`;
+        });
     });
   } else {
     nestedRow.classList.add("hidden");
@@ -1027,20 +1078,26 @@ function toggleNestedTable(projectId, btn) {
  * @param {string} projectId - Project ID
  */
 function showNestedTable(projectId) {
-  const nestedRow = document.querySelector(`tr.nested-tasks-row[data-project-id='${projectId}']`);
+  const nestedRow = document.querySelector(
+    `tr.nested-tasks-row[data-project-id='${projectId}']`,
+  );
   if (!nestedRow) return;
 
   nestedRow.classList.remove("hidden");
 
-  const toggleBtn = document.querySelector(`tr[data-project-id='${projectId}'] button.toggle-btn`);
+  const toggleBtn = document.querySelector(
+    `tr[data-project-id='${projectId}'] button.toggle-btn`,
+  );
   if (toggleBtn) toggleBtn.textContent = "▾";
 
   requestAnimationFrame(() => {
     const filterRowEl = nestedRow.querySelector(".task-filter-row td");
     const filterRowHeight = filterRowEl ? filterRowEl.offsetHeight : 0;
-    nestedRow.querySelectorAll("thead tr:not(.task-filter-row) th").forEach(th => {
-      th.style.top = `${filterRowHeight}px`;
-    });
+    nestedRow
+      .querySelectorAll("thead tr:not(.task-filter-row) th")
+      .forEach((th) => {
+        th.style.top = `${filterRowHeight}px`;
+      });
   });
 }
 
@@ -1051,13 +1108,16 @@ function renderAllTables() {
   const savedScrollPositions = captureNestedScrollPositions();
   const openProjectIds = captureOpenNestedTables();
 
-  ["onGoingTable", "doneTable", "holdCloseTable"].forEach(id => {
+  ["onGoingTable", "doneTable", "holdCloseTable"].forEach((id) => {
     document.querySelector(`#${id} tbody`).innerHTML = "";
   });
 
-  const filterText = document.getElementById("filterInput").value.trim().toLowerCase();
+  const filterText = document
+    .getElementById("filterInput")
+    .value.trim()
+    .toLowerCase();
 
-  let filteredProjects = projects.filter(p => {
+  let filteredProjects = projects.filter((p) => {
     if (filterText) {
       return (
         p.projectName.toLowerCase().includes(filterText) ||
@@ -1068,9 +1128,9 @@ function renderAllTables() {
   });
 
   // Split by status first
-  const onGoing = filteredProjects.filter(p => p.status === "On-going");
-  const done = filteredProjects.filter(p => p.status === "Done");
-  const hold = filteredProjects.filter(p => p.status === "Hold");
+  const onGoing = filteredProjects.filter((p) => p.status === "On-going");
+  const done = filteredProjects.filter((p) => p.status === "Done");
+  const hold = filteredProjects.filter((p) => p.status === "Hold");
 
   // Only On-going sorts by priority (0 = unranked, shown first)
   onGoing.sort((a, b) => {
@@ -1088,35 +1148,41 @@ function renderAllTables() {
   done.sort((a, b) => a.projectName.localeCompare(b.projectName));
   hold.sort((a, b) => a.projectName.localeCompare(b.projectName));
 
-  onGoing.forEach(project => {
+  onGoing.forEach((project) => {
     const projectRow = createProjectRow(project);
     const nestedRow = createNestedTasksRow(project);
     document.querySelector("#onGoingTable tbody").appendChild(projectRow);
     document.querySelector("#onGoingTable tbody").appendChild(nestedRow);
   });
 
-  done.forEach(project => {
-    document.querySelector("#doneTable tbody").appendChild(createProjectRow(project));
+  done.forEach((project) => {
+    document
+      .querySelector("#doneTable tbody")
+      .appendChild(createProjectRow(project));
   });
 
-  hold.forEach(project => {
-    document.querySelector("#holdCloseTable tbody").appendChild(createProjectRow(project));
+  hold.forEach((project) => {
+    document
+      .querySelector("#holdCloseTable tbody")
+      .appendChild(createProjectRow(project));
   });
 
   restoreOpenNestedTables(openProjectIds);
   restoreNestedScrollPositions(savedScrollPositions);
 }
 
-
 // Filter input event listener to re-render tables on input
-document.getElementById("filterInput").addEventListener("input", renderAllTables);
+document
+  .getElementById("filterInput")
+  .addEventListener("input", renderAllTables);
 
 // Initial UI setup
 refreshProjectNumbers();
 renderAllTables();
 
 // Display logged-in user info
-document.getElementById("currentUser").textContent = `${authData.username} · ${authData.role}`;
+document.getElementById("currentUser").textContent =
+  `${authData.username} · ${authData.role}`;
 
 // Logout button handler with confirmation
 document.getElementById("logout-btn").addEventListener("click", async () => {
@@ -1134,27 +1200,29 @@ document.getElementById("exportXLSX").addEventListener("click", () => {
 });
 
 // Export to Google Calendar button handler with UI feedback
-document.getElementById("exportCalendarBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("exportCalendarBtn");
-  btn.disabled = true;
-  btn.textContent = "Syncing...";
+document
+  .getElementById("exportCalendarBtn")
+  .addEventListener("click", async () => {
+    const btn = document.getElementById("exportCalendarBtn");
+    btn.disabled = true;
+    btn.textContent = "Syncing...";
 
-  try {
-    const response = await fetch("/export-calendar", { method: "POST" });
-    const result = await response.json();
+    try {
+      const response = await fetch("/export-calendar", { method: "POST" });
+      const result = await response.json();
 
-    if (result.success) {
-      alert(`Synced ${result.synced} tasks to Google Calendar!`);
-    } else {
-      alert("Sync failed: " + result.error);
+      if (result.success) {
+        alert(`Synced ${result.synced} tasks to Google Calendar!`);
+      } else {
+        alert("Sync failed: " + result.error);
+      }
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "⟳ Export to Google Calendar";
     }
-  } catch (err) {
-    alert("Error: " + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "⟳ Export to Google Calendar";
-  }
-});
+  });
 
 // Logs page button handler (visible only for engineering admin)
 document.getElementById("logsBtn").addEventListener("click", () => {
@@ -1162,7 +1230,7 @@ document.getElementById("logsBtn").addEventListener("click", () => {
 });
 
 // Toggle section buttons for collapsing project tables
-document.querySelectorAll(".toggle-section-btn").forEach(btn => {
+document.querySelectorAll(".toggle-section-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     const targetId = btn.dataset.target;
     const container = document.getElementById(targetId);
@@ -1172,27 +1240,136 @@ document.querySelectorAll(".toggle-section-btn").forEach(btn => {
 
   // Collapse Done and Hold sections by default, keep On-going open
   const targetId = btn.dataset.target;
-  if (targetId === "doneTableContainer" || targetId === "holdCloseTableContainer") {
+  if (
+    targetId === "doneTableContainer" ||
+    targetId === "holdCloseTableContainer"
+  ) {
     document.getElementById(targetId).classList.add("hidden");
     btn.textContent = "▸";
   }
 });
 
+document.getElementById("createMOMBtn").addEventListener("click", () => {
+  showMomModal();
+});
+
+function showMomModal() {
+  const overlay = document.createElement("div");
+  overlay.className = "mom-modal-overlay";
+
+  const onGoingProjectsList = projects.filter((p) => p.status === "On-going");
+
+  function projectCheckboxList(idPrefix) {
+    return onGoingProjectsList
+      .map(
+        (p) => `
+      <label class="mom-project-checkbox">
+        <input type="checkbox" value="${p.id}" data-group="${idPrefix}">
+        ${p.client} - ${p.projectName}
+      </label>
+    `,
+      )
+      .join("");
+  }
+
+  overlay.innerHTML = `
+    <div class="mom-modal">
+      <h2>Create MoM Tables</h2>
+
+      <div class="mom-project-section">
+        <h3>Follow Up from Previous Meeting — select projects</h3>
+        <div class="mom-project-list">
+          ${projectCheckboxList("followup")}
+        </div>
+      </div>
+
+      <div class="mom-project-section">
+        <h3>Current Meeting — select projects</h3>
+        <div class="mom-project-list">
+          ${projectCheckboxList("current")}
+        </div>
+      </div>
+
+      <div class="mom-modal-actions">
+        <button id="momCancelBtn" class="back-btn">Cancel</button>
+        <button id="momGenerateBtn" class="add-project-btn">Generate Tables</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("momCancelBtn").addEventListener("click", () => {
+    overlay.remove();
+  });
+
+  document
+    .getElementById("momGenerateBtn")
+    .addEventListener("click", async () => {
+      const followupProjectIds = [
+        ...overlay.querySelectorAll('input[data-group="followup"]:checked'),
+      ].map((cb) => parseInt(cb.value));
+
+      const currentProjectIds = [
+        ...overlay.querySelectorAll('input[data-group="current"]:checked'),
+      ].map((cb) => parseInt(cb.value));
+
+      if (followupProjectIds.length === 0 && currentProjectIds.length === 0) {
+        alert("Select at least one project in either table.");
+        return;
+      }
+
+      const btn = document.getElementById("momGenerateBtn");
+      btn.disabled = true;
+      btn.textContent = "Generating...";
+
+      try {
+        const response = await fetch("/mom/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ followupProjectIds, currentProjectIds }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || "Failed to generate MoM Tables");
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `MoM_${new Date().toISOString().slice(0, 10)}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        overlay.remove();
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate MoM Tables";
+      }
+    });
+}
+
 // Hide Functions Buttons if user is viewer
 if (isViewer) {
   document.getElementById("addProjectBtn").style.display = "none";
-  document.getElementById("importXLSX").style.display = "none";
+  // document.getElementById("importXLSX").style.display = "none";
   document.getElementById("exportCalendarBtn").style.display = "none";
   document.getElementById("createMOMBtn").style.display = "none";
   // exportXLSX stays visible since it's read-only
 }
 
 async function recalculateAllProjects() {
-    for (const project of projects) {
-        await syncProjectCalculations(project);
-    }
-    renderAllTables();
-    alert("All projects recalculated!");
+  for (const project of projects) {
+    await syncProjectCalculations(project);
+  }
+  renderAllTables();
+  alert("All projects recalculated!");
 }
 
 window.recalculateAllProjects = recalculateAllProjects;

@@ -58,7 +58,7 @@ async function sendCalendarInvite(task, attendeeEmails) {
       name: "Engineering Admin",
       email: "admengineering.benderang@gmail.com",
     },
-    attendees: attendeeEmails.map(email => ({
+    attendees: attendeeEmails.map((email) => ({
       email,
       rsvp: true,
       partstat: "NEEDS-ACTION",
@@ -120,7 +120,9 @@ function requireAdmin(req, res, next) {
  */
 function blockViewer(req, res, next) {
   if (req.session.role === "viewer") {
-    return res.status(403).json({ error: "Viewers cannot perform this action" });
+    return res
+      .status(403)
+      .json({ error: "Viewers cannot perform this action" });
   }
   next();
 }
@@ -135,14 +137,22 @@ function blockViewer(req, res, next) {
  * @param {string} entityName - Entity name or description
  * @param {string} details - Additional details (optional)
  */
-function writeLog(db, username, action, entityType, entityId, entityName, details = "") {
+function writeLog(
+  db,
+  username,
+  action,
+  entityType,
+  entityId,
+  entityName,
+  details = "",
+) {
   db.run(
     `INSERT INTO logs (username, action, entityType, entityId, entityName, details)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [username, action, entityType, entityId, entityName, details],
-    err => {
+    (err) => {
       if (err) console.error("Log write failed:", err.message);
-    }
+    },
   );
 }
 
@@ -156,7 +166,6 @@ function writeLog(db, username, action, entityType, entityId, entityName, detail
  */
 function reassignPriority(db, projectId, newPriority) {
   return new Promise((resolve, reject) => {
-
     // Get ALL on-going projects ordered by their current priority
     db.all(
       `
@@ -172,7 +181,7 @@ function reassignPriority(db, projectId, newPriority) {
         if (err) return reject(err);
 
         // Separate the moving project out of the list
-        const movingIndex = rows.findIndex(r => r.id === parseInt(projectId));
+        const movingIndex = rows.findIndex((r) => r.id === parseInt(projectId));
         if (movingIndex === -1) {
           // Project not found in on-going list (shouldn't normally happen), just resolve
           return resolve();
@@ -187,10 +196,10 @@ function reassignPriority(db, projectId, newPriority) {
             db.run("BEGIN TRANSACTION");
 
             rows.forEach((row, index) => {
-              db.run(
-                "UPDATE projects SET priority = ? WHERE id = ?",
-                [index + 1, row.id]
-              );
+              db.run("UPDATE projects SET priority = ? WHERE id = ?", [
+                index + 1,
+                row.id,
+              ]);
             });
 
             db.run(
@@ -205,14 +214,17 @@ function reassignPriority(db, projectId, newPriority) {
                   if (err) return reject(err);
                   resolve();
                 });
-              }
+              },
             );
           });
           return;
         }
 
         // Clamp newPriority to a valid range (1 to rows.length + 1)
-        const clampedPriority = Math.max(1, Math.min(newPriority, rows.length + 1));
+        const clampedPriority = Math.max(
+          1,
+          Math.min(newPriority, rows.length + 1),
+        );
 
         // Insert the moving project back into the list at the clamped position
         rows.splice(clampedPriority - 1, 0, movingProject);
@@ -222,10 +234,10 @@ function reassignPriority(db, projectId, newPriority) {
           db.run("BEGIN TRANSACTION");
 
           rows.forEach((row, index) => {
-            db.run(
-              "UPDATE projects SET priority = ? WHERE id = ?",
-              [index + 1, row.id]
-            );
+            db.run("UPDATE projects SET priority = ? WHERE id = ?", [
+              index + 1,
+              row.id,
+            ]);
           });
 
           db.run("COMMIT", (err) => {
@@ -236,7 +248,7 @@ function reassignPriority(db, projectId, newPriority) {
             resolve();
           });
         });
-      }
+      },
     );
   });
 }
@@ -251,7 +263,7 @@ app.use(
     cookie: {
       maxAge: 6 * 60 * 60 * 1000, // 6 hours session timeout
     },
-  })
+  }),
 );
 app.use(express.static("public"));
 
@@ -289,8 +301,8 @@ app.get("/projects", requireLogin, (req, res) => {
       }
 
       // Attach tasks to their respective projects
-      projects.forEach(project => {
-        project.tasks = tasks.filter(task => task.project_id === project.id);
+      projects.forEach((project) => {
+        project.tasks = tasks.filter((task) => task.project_id === project.id);
       });
 
       res.json(projects);
@@ -306,7 +318,10 @@ app.get("/projects", requireLogin, (req, res) => {
 function abbreviateClient(str) {
   const words = str.trim().split(" ");
   if (words.length > 1 || str.length > 10) {
-    return words.map(word => word[0]).join("").toUpperCase();
+    return words
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
   }
   return str;
 }
@@ -316,12 +331,15 @@ function abbreviateClient(str) {
  */
 app.get("/logs", requireAdmin, (req, res) => {
   const db = new sqlite3.Database("./database/tracker.db");
-  db.all("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 200", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  db.all(
+    "SELECT * FROM logs ORDER BY timestamp DESC LIMIT 200",
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    },
+  );
 });
-
 
 app.get("/projects/ongoing-count", requireLogin, blockViewer, (req, res) => {
   const db = new sqlite3.Database("./database/tracker.db");
@@ -335,10 +353,9 @@ app.get("/projects/ongoing-count", requireLogin, blockViewer, (req, res) => {
         return res.status(500).json({ error: err.message });
       }
       res.json({ count: row.count });
-    }
+    },
   );
 });
-
 
 /**
  * GET /export-excel - Export projects and tasks to Excel file
@@ -371,10 +388,11 @@ app.get("/export-excel", requireLogin, (req, res) => {
       ];
 
       // Add project rows
-      projects.forEach(project => {
+      projects.forEach((project) => {
         projectsSheet.addRow({
           projectName: project.projectName,
-          priority: project.status === "On-going" ? (project.priority ?? 0) : "",
+          priority:
+            project.status === "On-going" ? (project.priority ?? 0) : "",
           client: project.client,
           personInCharge: project.personInCharge,
           startDate: project.startDate,
@@ -387,15 +405,19 @@ app.get("/export-excel", requireLogin, (req, res) => {
       });
 
       // Style project header row
-      projectsSheet.getRow(1).eachCell(cell => {
+      projectsSheet.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "4285F4" } };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "4285F4" },
+        };
       });
       projectsSheet.views = [{ state: "frozen", ySplit: 1 }];
       projectsSheet.autoFilter = { from: "A1", to: "J1" };
 
       // Create individual sheets for each project's tasks
-      projects.forEach(project => {
+      projects.forEach((project) => {
         let sheetName = `${abbreviateClient(project.client)} - ${project.projectName}`;
         // Remove invalid characters and limit length to 31 chars (Excel limit)
         sheetName = sheetName.replace(/[\\\/\*\?\:\[\]]/g, "").substring(0, 31);
@@ -407,13 +429,15 @@ app.get("/export-excel", requireLogin, (req, res) => {
           { header: "Assigned To", key: "pic", width: 20 },
           { header: "Issued Date", key: "startDate", width: 20 },
           { header: "Due Date", key: "dueDate", width: 20 },
-          { header: "Completion Date", key: "completionDate", width:15 },
+          { header: "Completion Date", key: "completionDate", width: 15 },
           { header: "Task Progress (%)", key: "percentage", width: 20 },
           { header: "Comments", key: "comments", width: 40 },
           { header: "Status", key: "status", width: 20 },
         ];
 
-        const projectTasks = tasks.filter(task => task.project_id === project.id);
+        const projectTasks = tasks.filter(
+          (task) => task.project_id === project.id,
+        );
 
         projectTasks.forEach((task, index) => {
           sheet.addRow({
@@ -430,9 +454,13 @@ app.get("/export-excel", requireLogin, (req, res) => {
         });
 
         // Style task sheet header row
-        sheet.getRow(1).eachCell(cell => {
+        sheet.getRow(1).eachCell((cell) => {
           cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "1FA74A" } };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "1FA74A" },
+          };
         });
         sheet.views = [{ state: "frozen", ySplit: 1 }];
         sheet.autoFilter = { from: "A1", to: "H1" };
@@ -441,16 +469,107 @@ app.get("/export-excel", requireLogin, (req, res) => {
       // Set response headers for Excel file download
       res.setHeader(
         "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       );
       const filename = `BenderangProjectTracker_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
 
       // Write workbook to response stream
       await workbook.xlsx.write(res);
       res.end();
     });
   });
+});
+
+/**
+ * GET /mom/tasks-for-projects - Get tasks for MoM table generation
+ * type=current -> only On-going tasks
+ * type=followup -> On-going tasks + tasks changed to Done/Hold in last 6 days
+ */
+app.get("/mom/tasks-for-projects", requireLogin, async (req, res) => {
+  const { projectIds, type } = req.query;
+  // projectIds expected as comma-separated string, e.g. "1,2,3"
+
+  if (!projectIds || !type) {
+    return res.status(400).json({ error: "projectIds and type are required" });
+  }
+
+  const idList = projectIds
+    .split(",")
+    .map((id) => parseInt(id))
+    .filter(Boolean);
+  if (idList.length === 0) {
+    return res.json([]);
+  }
+
+  const db = new sqlite3.Database("./database/tracker.db");
+  const placeholders = idList.map(() => "?").join(",");
+
+  if (type === "current") {
+    db.all(
+      `
+      SELECT
+        tasks.id AS taskId, tasks.task, tasks.pic, tasks.progress,
+        tasks.dueDate, tasks.completionDate, tasks.status, tasks.comments,
+        projects.projectName, projects.client
+      FROM tasks
+      JOIN projects ON tasks.project_id = projects.id
+      WHERE
+        tasks.project_id IN (${placeholders})
+        AND tasks.status = 'On-going'
+      ORDER BY projects.projectName ASC, tasks.task ASC
+      `,
+      idList,
+      (err, rows) => {
+        if (err) {
+          console.error("SQLite error:", err.message);
+          return res.status(500).json({ error: err.message });
+        }
+        res.json(rows);
+      },
+    );
+  } else if (type === "followup") {
+    // On-going tasks for these projects, PLUS tasks that have a log entry
+    // showing their status changed to Done/Hold within the last 6 days
+    db.all(
+      `
+      SELECT DISTINCT
+        tasks.id AS taskId, tasks.task, tasks.pic, tasks.progress,
+        tasks.dueDate, tasks.completionDate, tasks.status, tasks.comments,
+        projects.projectName, projects.client
+      FROM tasks
+      JOIN projects ON tasks.project_id = projects.id
+      WHERE
+        tasks.project_id IN (${placeholders})
+        AND (
+          tasks.status = 'On-going'
+          OR (
+            tasks.status IN ('Done', 'Hold')
+            AND tasks.id IN (
+              SELECT entityId FROM logs
+              WHERE entityType = 'task'
+                AND action = 'UPDATE'
+                AND date(timestamp) >= date('now', '-6 days')
+            )
+          )
+        )
+      ORDER BY projects.projectName ASC, tasks.task ASC
+      `,
+      idList,
+      (err, rows) => {
+        if (err) {
+          console.error("SQLite error:", err.message);
+          return res.status(500).json({ error: err.message });
+        }
+        res.json(rows);
+      },
+    );
+  } else {
+    res.status(400).json({ error: "type must be 'current' or 'followup'" });
+  }
 });
 
 /**
@@ -476,13 +595,13 @@ async function batchProcess(tasks, db, batchSize = 5) {
     const batch = tasks.slice(i, i + batchSize);
 
     await Promise.all(
-      batch.map(async task => {
+      batch.map(async (task) => {
         // Prepare attendees emails from PIC initials
         const attendees = task.pic
           .split(",")
-          .map(name => name.trim())
-          .filter(name => picEmailMap[name])
-          .map(name => ({ email: picEmailMap[name] }));
+          .map((name) => name.trim())
+          .filter((name) => picEmailMap[name])
+          .map((name) => ({ email: picEmailMap[name] }));
 
         // Always include engineering admin email
         attendees.push({ email: "admengineering.benderang@gmail.com" });
@@ -518,7 +637,7 @@ async function batchProcess(tasks, db, batchSize = 5) {
             await calendar.events.update({
               calendarId: "admengineering.benderang@gmail.com",
               eventId: task.eventId,
-              // sendUpdates: "all", --> this is native google calendar invitation sender. Commented out because nodemailer already send invites. 
+              // sendUpdates: "all", --> this is native google calendar invitation sender. Commented out because nodemailer already send invites.
               requestBody: eventBody,
             });
           } catch (updateErr) {
@@ -534,7 +653,7 @@ async function batchProcess(tasks, db, batchSize = 5) {
                 db.run(
                   "UPDATE tasks SET eventId = ? WHERE id = ?",
                   [created.data.id, task.id],
-                  err => (err ? reject(err) : resolve())
+                  (err) => (err ? reject(err) : resolve()),
                 );
               });
             } else {
@@ -545,7 +664,7 @@ async function batchProcess(tasks, db, batchSize = 5) {
           // No eventId, create new event
           const created = await calendar.events.insert({
             calendarId: "admengineering.benderang@gmail.com",
-            // sendUpdates: "all", --> this is native google calendar invitation sender. Commented out because nodemailer already send invites. 
+            // sendUpdates: "all", --> this is native google calendar invitation sender. Commented out because nodemailer already send invites.
             requestBody: eventBody,
           });
           isNewEvent = true;
@@ -553,22 +672,22 @@ async function batchProcess(tasks, db, batchSize = 5) {
             db.run(
               "UPDATE tasks SET eventId = ? WHERE id = ?",
               [created.data.id, task.id],
-              err => (err ? reject(err) : resolve())
+              (err) => (err ? reject(err) : resolve()),
             );
           });
         }
 
         // Send invite email only for new events
         if (isNewEvent) {
-          const emails = attendees.map(a => a.email);
+          const emails = attendees.map((a) => a.email);
           await sendCalendarInvite(task, emails);
         }
-      })
+      }),
     );
 
     // Delay between batches to avoid rate limits
     if (i + batchSize < tasks.length) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
 }
@@ -600,7 +719,7 @@ app.post("/export-calendar", requireLogin, blockViewer, async (req, res) => {
         (err, rows) => {
           if (err) reject(err);
           else resolve(rows);
-        }
+        },
       );
     });
 
@@ -618,6 +737,569 @@ app.post("/export-calendar", requireLogin, blockViewer, async (req, res) => {
   }
 });
 
+const {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  Table,
+  TableRow,
+  TableCell,
+  AlignmentType,
+  HeadingLevel,
+  BorderStyle,
+  WidthType,
+  ShadingType,
+  VerticalAlign,
+} = require("docx");
+
+/**
+ * Build a styled table cell with text
+ */
+function momCell(text, opts = {}) {
+  const {
+    bold = false,
+    width = 1000,
+    shading = null,
+    align = AlignmentType.LEFT,
+    underline = false,
+    borderBottom = true,
+    borderTop = false,
+    fontSize = 20,
+  } = opts;
+
+  const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+
+  const borders = {
+    top: borderTop ? thinBorder : noBorder,
+    bottom: borderBottom ? thinBorder : noBorder,
+    left: noBorder,
+    right: noBorder,
+  };
+
+  return new TableCell({
+    borders,
+    width: { size: width, type: WidthType.DXA },
+    shading: shading ? { fill: shading, type: ShadingType.CLEAR } : undefined,
+    margins: { top: 100, bottom: 100, left: 120, right: 120 },
+    verticalAlign: VerticalAlign.TOP,
+    children: [
+      new Paragraph({
+        alignment: align,
+        children: [
+          new TextRun({
+            text: text || "-",
+            bold,
+            underline: underline ? {} : undefined,
+            font: "Arial",
+            size: fontSize,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
+ * Build the action items table (used for both "Follow Up" and "Current Meeting")
+ */
+function buildActionItemsTable(tasksData, includeActualCompletion = false) {
+  const colWidths = includeActualCompletion
+    ? [1800, 2700, 1500, 2000, 1330, 1330]
+    : [1800, 2900, 1700, 2363, 1500];
+
+  const headerCells = [
+    new TableCell({
+      borders: allNoBorderExceptBottom(),
+      width: { size: colWidths[0], type: WidthType.DXA },
+      verticalAlign: VerticalAlign.CENTER,
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: "Client Name -Project Name",
+              bold: true,
+              font: "Arial",
+              size: 20,
+            }),
+          ],
+        }),
+      ],
+    }),
+    new TableCell({
+      borders: allNoBorderExceptBottom(),
+      width: { size: colWidths[1], type: WidthType.DXA },
+      verticalAlign: VerticalAlign.CENTER,
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: "Action Item",
+              bold: true,
+              font: "Arial",
+              size: 20,
+            }),
+          ],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: "(Red Indicates Critical)",
+              bold: true,
+              color: "C00000",
+              font: "Arial",
+              size: 20,
+            }),
+          ],
+        }),
+      ],
+    }),
+    headerCellSimple("Person(s) Responsible", colWidths[2]),
+    headerCellSimple("Progress/Notes", colWidths[3]),
+    headerCellSimple("Planned Completion Date", colWidths[4]),
+  ];
+
+  if (includeActualCompletion) {
+    headerCells.push(headerCellSimple("Actual Completion Date", colWidths[5]));
+  }
+
+  const rows = [new TableRow({ children: headerCells, tableHeader: true })];
+
+  if (tasksData.length === 0) {
+    const emptyCells = [
+      momCell("-", { width: colWidths[0] }),
+      momCell("No activity recorded", { width: colWidths[1] }),
+      momCell("-", { width: colWidths[2] }),
+      momCell("-", { width: colWidths[3] }),
+      momCell("-", { width: colWidths[4] }),
+    ];
+    if (includeActualCompletion) {
+      emptyCells.push(momCell("-", { width: colWidths[5] }));
+    }
+    rows.push(new TableRow({ children: emptyCells }));
+    return finalizeTable(rows, colWidths);
+  }
+
+  // Group tasks by project
+  const grouped = {};
+  const groupOrder = [];
+
+  tasksData.forEach((t) => {
+    const key = `${t.client} - ${t.projectName}`;
+    if (!grouped[key]) {
+      grouped[key] = [];
+      groupOrder.push(key);
+    }
+    grouped[key].push(t);
+  });
+
+  groupOrder.forEach((projectKey, projectIndex) => {
+    const tasksInProject = grouped[projectKey];
+    const groupSize = tasksInProject.length;
+
+    tasksInProject.forEach((t, taskIndex) => {
+      const isFirstTaskInGroup = taskIndex === 0;
+      const isLastTaskInGroup = taskIndex === groupSize - 1;
+
+      const cells = [];
+
+      // Project name cell — only created on first row, spans the whole group via rowSpan
+      if (isFirstTaskInGroup) {
+        cells.push(
+          new TableCell({
+            borders: rowBorders(true), // bottom border drawn once, on the merged cell's bottom edge
+            rowSpan: groupSize,
+            width: { size: colWidths[0], type: WidthType.DXA },
+            verticalAlign: VerticalAlign.TOP,
+            margins: { top: 80, bottom: 80, left: 120, right: 120 },
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `${projectIndex + 1}.  `,
+                    bold: true,
+                    font: "Arial",
+                    size: 20,
+                  }),
+                  new TextRun({
+                    text: projectKey,
+                    bold: true,
+                    font: "Arial",
+                    size: 20,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        );
+      }
+      // On subsequent rows within the same group, skip adding this cell entirely —
+      // docx handles the merge automatically via rowSpan on the first cell
+
+      // Action item
+      cells.push(
+        new TableCell({
+          borders: rowBorders(isLastTaskInGroup),
+          width: { size: colWidths[1], type: WidthType.DXA },
+          verticalAlign: VerticalAlign.TOP,
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${taskIndex + 1}.  `,
+                  font: "Arial",
+                  size: 20,
+                }),
+                new TextRun({
+                  text: t.task,
+                  underline: {},
+                  font: "Arial",
+                  size: 20,
+                }),
+              ],
+            }),
+          ],
+        }),
+      );
+
+      // PIC
+      cells.push(
+        new TableCell({
+          borders: rowBorders(isLastTaskInGroup),
+          width: { size: colWidths[2], type: WidthType.DXA },
+          verticalAlign: VerticalAlign.TOP,
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: t.pic,
+                  underline: {},
+                  font: "Arial",
+                  size: 20,
+                }),
+              ],
+            }),
+          ],
+        }),
+      );
+
+      // Progress/Notes
+      const progressText = t.progress != null ? `Progress ${t.progress}%` : "";
+      const noteText = t.comments
+        ? progressText
+          ? `. ${t.comments}`
+          : t.comments
+        : "";
+      cells.push(
+        new TableCell({
+          borders: rowBorders(isLastTaskInGroup),
+          width: { size: colWidths[3], type: WidthType.DXA },
+          verticalAlign: VerticalAlign.TOP,
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: progressText + noteText || "-",
+                  font: "Arial",
+                  size: 20,
+                }),
+              ],
+            }),
+          ],
+        }),
+      );
+
+      // Planned Completion Date
+      cells.push(
+        new TableCell({
+          borders: rowBorders(isLastTaskInGroup),
+          width: { size: colWidths[4], type: WidthType.DXA },
+          verticalAlign: VerticalAlign.TOP,
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: formatMomDate(t.dueDate),
+                  underline: {},
+                  font: "Arial",
+                  size: 20,
+                }),
+              ],
+            }),
+          ],
+        }),
+      );
+
+      if (includeActualCompletion) {
+        cells.push(
+          new TableCell({
+            borders: rowBorders(isLastTaskInGroup),
+            width: { size: colWidths[5], type: WidthType.DXA },
+            verticalAlign: VerticalAlign.TOP,
+            margins: { top: 80, bottom: 80, left: 120, right: 120 },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({
+                    text: t.completionDate
+                      ? formatMomDate(t.completionDate)
+                      : "",
+                    font: "Arial",
+                    size: 20,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        );
+      }
+
+      rows.push(new TableRow({ children: cells }));
+    });
+  });
+
+  return finalizeTable(rows, colWidths);
+}
+
+function headerCellSimple(text, width) {
+  return new TableCell({
+    borders: allNoBorderExceptBottom(),
+    width: { size: width, type: WidthType.DXA },
+    verticalAlign: VerticalAlign.CENTER,
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text, bold: true, font: "Arial", size: 20 })],
+      }),
+    ],
+  });
+}
+
+function allNoBorderExceptBottom() {
+  const thickBorder = { style: BorderStyle.SINGLE, size: 8, color: "000000" };
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  return {
+    top: thickBorder,
+    bottom: thickBorder,
+    left: noBorder,
+    right: noBorder,
+  };
+}
+
+function rowBorders(isLastInGroup) {
+  const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: "AAAAAA" };
+  const thickBorder = { style: BorderStyle.SINGLE, size: 8, color: "000000" };
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  return {
+    top: noBorder,
+    bottom: isLastInGroup ? thickBorder : thinBorder,
+    left: noBorder,
+    right: noBorder,
+  };
+}
+
+function finalizeTable(rows, colWidths) {
+  const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+  return new Table({
+    width: { size: totalWidth, type: WidthType.DXA },
+    columnWidths: colWidths,
+    rows,
+  });
+}
+
+function formatMomDate(dateStr) {
+  if (!dateStr) return "";
+  const months = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
+  const [y, m, d] = dateStr.split("-");
+  return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
+}
+
+function momSectionHeading(text) {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_2,
+    children: [new TextRun({ text, bold: true, font: "Arial" })],
+  });
+}
+
+function momParagraph(text) {
+  return new Paragraph({
+    children: [new TextRun({ text: text || "N/A", font: "Arial", size: 22 })],
+    spacing: { after: 200 },
+  });
+}
+
+function momBullet(text) {
+  return new Paragraph({
+    numbering: { reference: "mom-bullets", level: 0 },
+    children: [new TextRun({ text, font: "Arial", size: 22 })],
+  });
+}
+
+/**
+ * POST /mom/generate - Generate a Minutes of Meeting Word document
+ */
+app.post("/mom/generate", requireLogin, blockViewer, async (req, res) => {
+  try {
+    const { followupProjectIds, currentProjectIds } = req.body;
+
+    const db = new sqlite3.Database("./database/tracker.db");
+
+    const fetchTasksForProjects = (idList, type) => {
+      return new Promise((resolve, reject) => {
+        if (!idList || idList.length === 0) return resolve([]);
+
+        const placeholders = idList.map(() => "?").join(",");
+
+        const query =
+          type === "current"
+            ? `
+            SELECT
+              tasks.id AS taskId, tasks.task, tasks.pic, tasks.progress,
+              tasks.dueDate, tasks.completionDate, tasks.status, tasks.comments,
+              projects.projectName, projects.client
+            FROM tasks
+            JOIN projects ON tasks.project_id = projects.id
+            WHERE tasks.project_id IN (${placeholders}) AND tasks.status = 'On-going'
+            ORDER BY projects.projectName ASC, tasks.task ASC
+          `
+            : `
+            SELECT DISTINCT
+              tasks.id AS taskId, tasks.task, tasks.pic, tasks.progress,
+              tasks.dueDate, tasks.completionDate, tasks.status, tasks.comments,
+              projects.projectName, projects.client
+            FROM tasks
+            JOIN projects ON tasks.project_id = projects.id
+            WHERE
+              tasks.project_id IN (${placeholders})
+              AND (
+                tasks.status = 'On-going'
+                OR (
+                  tasks.status IN ('Done', 'Hold')
+                  AND tasks.id IN (
+                    SELECT entityId FROM logs
+                    WHERE entityType = 'task' AND action = 'UPDATE'
+                      AND date(timestamp) >= date('now', '-6 days')
+                  )
+                )
+              )
+            ORDER BY projects.projectName ASC, tasks.task ASC
+          `;
+
+        db.all(query, idList, (err, rows) =>
+          err ? reject(err) : resolve(rows),
+        );
+      });
+    };
+
+    const followupTasks = await fetchTasksForProjects(
+      followupProjectIds,
+      "followup",
+    );
+    const currentTasks = await fetchTasksForProjects(
+      currentProjectIds,
+      "current",
+    );
+
+    db.close();
+
+    const doc = new Document({
+      styles: {
+        default: { document: { run: { font: "Arial", size: 20 } } },
+      },
+      sections: [
+        {
+          properties: {
+            page: {
+              size: { width: 12240, height: 15840 },
+              margin: { top: 720, right: 720, bottom: 720, left: 720 },
+            },
+          },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 200 },
+              children: [
+                new TextRun({
+                  text: "Follow Up from Previous Meeting",
+                  bold: true,
+                  underline: {},
+                  size: 28,
+                  font: "Arial",
+                }),
+              ],
+            }),
+            buildActionItemsTable(followupTasks, true),
+
+            new Paragraph({ text: "", spacing: { before: 300, after: 200 } }),
+
+            new Paragraph({
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 200 },
+              children: [
+                new TextRun({
+                  text: "Current Meeting",
+                  bold: true,
+                  underline: {},
+                  size: 28,
+                  font: "Arial",
+                }),
+              ],
+            }),
+            buildActionItemsTable(currentTasks, false),
+          ],
+        },
+      ],
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    const filename = `MoM_${new Date().toISOString().slice(0, 10)}.docx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
+
+    writeLog(
+      new sqlite3.Database("./database/tracker.db"),
+      req.session.username,
+      "CREATE",
+      "mom",
+      "",
+      `MoM generated`,
+    );
+  } catch (err) {
+    console.error("MoM generation error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /**
  * POST /login - Authenticate user and create session
  */
@@ -625,27 +1307,31 @@ app.post("/login", (req, res) => {
   const { username, password } = req.body;
   const db = new sqlite3.Database("./database/tracker.db");
 
-  db.get("SELECT * FROM users WHERE username = ?", [username], async (err, user) => {
-    if (err) {
-      console.error("SQLite error:", err.message);
-      return res.status(500).json({ error: err.message });
-    }
-    if (!user) {
-      return res.status(401).json({ error: "Invalid username" });
-    }
+  db.get(
+    "SELECT * FROM users WHERE username = ?",
+    [username],
+    async (err, user) => {
+      if (err) {
+        console.error("SQLite error:", err.message);
+        return res.status(500).json({ error: err.message });
+      }
+      if (!user) {
+        return res.status(401).json({ error: "Invalid username" });
+      }
 
-    const match = await bcrypt.compare(password, user.password_hash);
-    if (!match) {
-      return res.status(401).json({ error: "Invalid password" });
-    }
+      const match = await bcrypt.compare(password, user.password_hash);
+      if (!match) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
 
-    // Set session info
-    req.session.userId = user.id;
-    req.session.username = user.username;
-    req.session.role = user.role;
+      // Set session info
+      req.session.userId = user.id;
+      req.session.username = user.username;
+      req.session.role = user.role;
 
-    res.json({ success: true });
-  });
+      res.json({ success: true });
+    },
+  );
 });
 
 /**
@@ -690,9 +1376,21 @@ app.post("/projects", requireLogin, blockViewer, (req, res) => {
       }
 
       res.json({ id: this.lastID, priority: 0 });
-      writeLog(db, req.session.username, "CREATE", "project", this.lastID, p.projectName);
-      io.emit("projectCreated", { ...p, id: this.lastID, priority: 0, tasks: [] });
-    }
+      writeLog(
+        db,
+        req.session.username,
+        "CREATE",
+        "project",
+        this.lastID,
+        p.projectName,
+      );
+      io.emit("projectCreated", {
+        ...p,
+        id: this.lastID,
+        priority: 0,
+        tasks: [],
+      });
+    },
   );
 });
 
@@ -719,7 +1417,7 @@ app.post("/projects/:id/tasks", requireLogin, blockViewer, (req, res) => {
       task.progress,
       task.comments,
       task.status,
-      task.completionDate || ""
+      task.completionDate || "",
     ],
     function (err) {
       if (err) {
@@ -728,9 +1426,20 @@ app.post("/projects/:id/tasks", requireLogin, blockViewer, (req, res) => {
       }
 
       res.json({ id: this.lastID });
-      writeLog(db, req.session.username, "CREATE", "task", this.lastID, task.task);
-      io.emit("taskCreated", { ...task, id: this.lastID, project_id: req.params.id });
-    }
+      writeLog(
+        db,
+        req.session.username,
+        "CREATE",
+        "task",
+        this.lastID,
+        task.task,
+      );
+      io.emit("taskCreated", {
+        ...task,
+        id: this.lastID,
+        project_id: req.params.id,
+      });
+    },
   );
 });
 
@@ -749,7 +1458,7 @@ app.put("/projects/:id", requireLogin, blockViewer, async (req, res) => {
       db.get(
         "SELECT status, priority FROM projects WHERE id = ?",
         [projectId],
-        (err, row) => err ? reject(err) : resolve(row)
+        (err, row) => (err ? reject(err) : resolve(row)),
       );
     });
 
@@ -765,7 +1474,7 @@ app.put("/projects/:id", requireLogin, blockViewer, async (req, res) => {
           db.run(
             "UPDATE projects SET priority = priority - 1 WHERE priority > ?",
             [oldPriority],
-            err => err ? reject(err) : resolve()
+            (err) => (err ? reject(err) : resolve()),
           );
         });
       }
@@ -777,7 +1486,11 @@ app.put("/projects/:id", requireLogin, blockViewer, async (req, res) => {
       project.priority = 0;
     }
     // Staying On-going, and priority is explicitly being changed
-    else if (isNowOnGoing && project.priority !== undefined && project.priority !== null) {
+    else if (
+      isNowOnGoing &&
+      project.priority !== undefined &&
+      project.priority !== null
+    ) {
       await reassignPriority(db, projectId, parseInt(project.priority));
     }
 
@@ -807,13 +1520,25 @@ app.put("/projects/:id", requireLogin, blockViewer, async (req, res) => {
         }
 
         res.json({ success: true });
-        writeLog(db, req.session.username, "UPDATE", "project", projectId, project.projectName);
+        writeLog(
+          db,
+          req.session.username,
+          "UPDATE",
+          "project",
+          projectId,
+          project.projectName,
+        );
         io.emit("projectsNeedRefresh");
-        io.emit("projectUpdated", { projectId, project: { ...project, priority: project.priority ?? currentRow.priority } });
-      }
+        io.emit("projectUpdated", {
+          projectId,
+          project: {
+            ...project,
+            priority: project.priority ?? currentRow.priority,
+          },
+        });
+      },
     );
-  }
-  catch (err) {
+  } catch (err) {
     console.error("Priority reassignment error:", err.message);
     res.status(500).json({ error: err.message });
   }
@@ -854,7 +1579,7 @@ app.put("/tasks/:id", requireLogin, blockViewer, (req, res) => {
       res.json({ success: true });
       writeLog(db, req.session.username, "UPDATE", "task", taskId, task.task);
       io.emit("taskUpdated", { taskId, task });
-    }
+    },
   );
 });
 
@@ -876,25 +1601,36 @@ app.delete("/projects/:id", requireLogin, blockViewer, (req, res) => {
 
       const deletedPriority = row ? row.priority : null;
 
-      db.run("DELETE FROM projects WHERE id = ?", [req.params.id], function (err) {
-        if (err) {
-          console.error("SQLite error:", err.message);
-          return res.status(500).json({ error: err.message });
-        }
+      db.run(
+        "DELETE FROM projects WHERE id = ?",
+        [req.params.id],
+        function (err) {
+          if (err) {
+            console.error("SQLite error:", err.message);
+            return res.status(500).json({ error: err.message });
+          }
 
-        // Shift everyone after the deleted priority down by 1, closing the gap
-        if (deletedPriority !== null && deletedPriority >= 1) {
-          db.run(
-            "UPDATE projects SET priority = priority - 1 WHERE priority > ?",
-            [deletedPriority]
+          // Shift everyone after the deleted priority down by 1, closing the gap
+          if (deletedPriority !== null && deletedPriority >= 1) {
+            db.run(
+              "UPDATE projects SET priority = priority - 1 WHERE priority > ?",
+              [deletedPriority],
+            );
+          }
+
+          res.json({ success: true });
+          writeLog(
+            db,
+            req.session.username,
+            "DELETE",
+            "project",
+            req.params.id,
+            "",
           );
-        }
-
-        res.json({ success: true });
-        writeLog(db, req.session.username, "DELETE", "project", req.params.id, "");
-        io.emit("projectDeleted", { projectId: req.params.id });
-      });
-    }
+          io.emit("projectDeleted", { projectId: req.params.id });
+        },
+      );
+    },
   );
 });
 

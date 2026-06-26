@@ -6,6 +6,7 @@
     <title>Benderang Project Tracker</title>
     <link rel="icon" href="src/favicon.png" type="image/x-icon" />
     <link rel="stylesheet" href="style.css" />
+    <script src="theme.js"></script>
   </head>
   <body>
     <header>
@@ -16,6 +17,7 @@
       <div class="log-stuff">
         <p>Logged in as <span id="currentUser"></span></p>
         <button id="logout-btn">Logout</button>
+        <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle dark mode">🌙</button>
       </div>
     </header>
 
@@ -35,11 +37,11 @@
         <!-- Functional buttons for export/import and calendar -->
         <div id="functionalityBtn">
           <button id="exportXLSX" class="export-xlsx-btn">↓ Export to Excel</button>
-          <button id="importXLSX" class="import-xlsx-btn">↑ Import from Excel</button>
+          <!-- <button id="importXLSX" class="import-xlsx-btn">↑ Import from Excel</button> -->
           <button id="exportCalendarBtn" class="create-calendar-btn">
             ▦ Export to Google Calendar
           </button>
-          <button id="createMOMBtn" class="create-mom-btn">✎ Create Minutes of Meeting</button>
+          <button id="createMOMBtn" class="create-mom-btn">✎ Create MoM Tables</button>
         </div>
       </div>
 

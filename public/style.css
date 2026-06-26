@@ -1,11 +1,68 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+:root {
+    --bg-body: #f0f4f8;
+    --bg-surface: #ffffff;
+    --bg-surface-alt: #eff6ff;
+    --bg-header: #ffffff;
+    --bg-input: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --border-color: #e2e8f0;
+    --border-color-strong: #d1d5db;
+    --shadow-color: rgba(0,0,0,0.07);
+    --table-header-blue: #2563eb;
+    --table-header-green: #16a34a;
+    --row-hover: #dbeafe;
+    --row-zebra: #eff6ff;
+    --nested-row-zebra: #f0fdf4;
+    --overdue-bg: #fef2f2;
+    --overdue-bg-hover: #fee2e2;
+    --overdue-border: #ef4444;
+    --add-task-section-label: #374151;
+    --button-color: rgb(221, 217, 217);
+    --button-font-color: var(--text-primary);
+    --delete-btn-bg: #fff1f1;
+    --delete-btn-bg-hover: #4a2424;
+    --delete-btn-color: #f87171;
+}
+
+[data-theme="dark"] {
+    --bg-body: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-surface-alt: #1e2a3f;
+    --bg-header: #1e293b;
+    --bg-input: #273548;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-color: #334155;
+    --border-color-strong: #475569;
+    --shadow-color: rgba(0,0,0,0.4);
+    --table-header-blue: #3b5bdb;
+    --table-header-green: #074b20;
+    --row-hover: #334155;
+    --row-zebra: #1a2436;
+    --nested-row-zebra: #1a2e22;
+    --overdue-bg: #3f1f1f;
+    --overdue-bg-hover: #4a2424;
+    --overdue-border: #f87171;
+    --add-task-section-label: #8492a8;
+    --button-color: rgb(56, 54, 54);
+    --button-font-color: var(--text-primary);
+    --delete-btn-bg: #3f1f1f;
+    --delete-btn-bg-hover: #4a2424;
+    --delete-btn-color: #f87171;
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
 }
 
 body {
-    background: #f0f4f8;
+    background: var(--bg-body);
+    color: var(--text-primary);
     font-family: "Inter", sans-serif;
     margin: 0;
     min-height: 100vh;
@@ -21,13 +78,13 @@ header {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    background-color: #ffffff;
     width: 100%;
     height: 64px;
     z-index: 100;
-    border-bottom: 1px solid #e2e8f0;
     padding: 0 clamp(16px, 5vw, 60px);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    background-color: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 1px 4px var(--shadow-color);
 }
 
 #benderangLogo {
@@ -45,7 +102,7 @@ header {
 #benderangLogo h1 {
     font-size: 1.2rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--text-primary);
     margin: 0;
 }
 
@@ -55,7 +112,7 @@ header {
     align-items: center;
     gap: 12px;
     font-size: 0.875rem;
-    color: #64748b;
+    color: var(--text-secondary);
 }
 
 #currentUser {
@@ -74,9 +131,9 @@ header {
 }
 
 .toggle-section-btn {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    color: #1e293b;
+    background: var(--bg-surface-alt);
+    border-color: var(--border-color);
+    color: var(--text-primary);
     font-size: 18px;
     padding: 2px 8px;
     border-radius: 6px;
@@ -97,7 +154,6 @@ header {
 }
 
 .tracker-dashboard {
-    background: #ffffff;
     width: 100%;
     margin: 20px auto 0;
     display: flex;
@@ -105,8 +161,9 @@ header {
     justify-content: space-between;
     border-radius: 12px;
     padding: 16px 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    border: 1px solid #eef2f7;
+    background: var(--bg-surface);
+    box-shadow: 0 2px 8px var(--shadow-color);
+    border: 1px solid var(--border-color);
 }
 
 #functionalityBtn {
@@ -161,7 +218,9 @@ header {
 /* ── Buttons ── */
 button {
     border: none;
+    color: var(--button-font-color);
     border-radius: 8px;
+    background-color: var(--button-color);
     padding: 8px 14px;
     cursor: pointer;
     font-family: inherit;
@@ -205,7 +264,7 @@ button:active {
 }
 
 .add-task-btn {
-    background: #16a34a;
+    background: var(--table-header-green);
     color: white;
     padding: 7px 12px;
 }
@@ -215,18 +274,18 @@ button:active {
 }
 
 .delete-btn {
-    background: #fff1f1;
+    background: var(--delete-btn-bg);
     border: none;
     font-size: 16px;
     font-weight: 500;
-    color: #ec6c6c;
+    color: var(--delete-btn-color);
     border-radius: 8px;
     padding: 6px 8px;
     transition: background 0.15s;
 }
 
 .delete-btn:hover {
-    background: #fee2e2;
+    background: var(--delete-btn-bg-hover);
 }
 
 .export-xlsx-btn:hover, 
@@ -244,7 +303,7 @@ button:active {
 
 .nested-table tfoot .task-footer-row td {
     padding: 10px 14px;
-    background-color: #f8fafc;
+    background-color: var(--bg-surface);
     text-align: left;
     border-top: 1px solid #e2e8f0;
 }
@@ -256,15 +315,15 @@ button:active {
 /* ── Inputs & Selects ── */
 input, select {
     padding: 8px 10px;
-    border: 1.5px solid #d1d5db;
     border-radius: 8px;
     font-family: inherit;
     font-size: 0.875rem;
-    color: #1e293b;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
-    background: #fff;
     white-space: no-wrap;
+    border: 1.5px solid var(--border-color-strong);
+    color: var(--text-primary);
+    background: var(--bg-input);
 }
 
 input:focus, select:focus {
@@ -282,20 +341,20 @@ input::placeholder {
 
 /* ── Section Cards ── */
 .section {
-    background: white;
     border-radius: 14px;
     border-top: 3px solid grey;
     padding: 5px 20px;
     margin-top: 20px;
     margin-bottom: 4px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    background: var(--bg-surface);
+    box-shadow: 0 1px 4px var(--shadow-color);
     width: 100%;
 }
 
 .section h2 {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--text-primary);
     margin-bottom: 0px;
 }
 
@@ -305,7 +364,7 @@ input::placeholder {
     overflow-x: auto;
     display: block;
     border-radius: 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-color);
 }
 
 table {
@@ -315,17 +374,18 @@ table {
 }
 
 thead tr {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: var(--table-header-blue);
 }
 
 th, td {
     padding: 10px 16px;
     text-align: left;
     user-select: none;
-    border-bottom: 1px solid #e2e8f0;
     border-right: none; /* ← explicitly remove vertical border */
     vertical-align: middle;
     font-size: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
 }
 
 th {
@@ -343,7 +403,7 @@ th {
 }
 
 table.nested-table thead tr {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
+    background: var(--table-header-green);
 }
 
 th[data-key="priority"], td.editable:nth-child(3) {
@@ -366,7 +426,7 @@ th.sort-desc::after { content: " ▼"; position: absolute; right: 8px; }
 .empty-message {
     text-align: center;
     padding: 40px;
-    background: #fafafa;
+    background: var(--bg-surface-alt);
 }
 
 .empty-state {
@@ -381,11 +441,11 @@ th.sort-desc::after { content: " ▼"; position: absolute; right: 8px; }
 
 /* ── Row Zebra & Hover ── */
 tbody tr:nth-child(4n + 1):not(.nested-tasks-row) {
-    background-color: #eff6ff;
+    background-color: var(--row-zebra);
 }
 
 tbody tr:not(.nested-tasks-row):hover {
-    background-color: #dbeafe;
+    background-color: var(--row-hover);
 }
 
 /* ── Nested Table ── */
@@ -403,7 +463,7 @@ tbody tr:not(.nested-tasks-row):hover {
 table.nested-table th {
     position: sticky;
     z-index: 10;
-    background: #16a34a;
+    background: var(--table-header-green);
     background-attachment: local;
     background-clip: padding-box;
     box-shadow: inset 0 -1px 0 #e2e8f0;
@@ -413,11 +473,11 @@ table.nested-table th {
 }
 
 .nested-table tbody tr:nth-child(2n + 1) {
-    background-color: #f0fdf4;
+    background-color: var(--nested-row-zebra);
 }
 
 .nested-table .task-filter-row td {
-    background-color: #f8fafc;
+    background-color: var(--bg-surface-alt);
     padding: 10px 14px;
 }
 
@@ -432,7 +492,7 @@ table.nested-table th {
 
 .filter-add-task-section label {
     font-size: 1rem;
-    color: #374151;
+    color: var(--add-task-section-label);
     font-weight: 500;
 }
 
@@ -471,7 +531,7 @@ table.nested-table th {
 /* ── Overdue Badge ── */
 .overdue-badge {
     background-color: #ef4444;
-    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
     color: white;
     padding: 2px 8px;
     border-radius: 12px;
@@ -490,7 +550,7 @@ table.nested-table th {
 }
 
 .editable:hover {
-    background-color: #f1f5f9;
+    background-color: var(--bg-surface-alt);
 }
 
 .editable input, .editable select {
@@ -508,8 +568,9 @@ table.nested-table th {
     padding: 2px 6px;
     cursor: pointer;
     font-size: 20px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-surface-alt);
+    border-color: var(--border-color);
+    color: var(--text-primary);
     border-radius: 6px;
     line-height: 1;
 }
@@ -547,22 +608,22 @@ footer {
     text-align: center;
     padding: 16px 0;
     margin-top: 20px;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
 
 #holdCloseSection .table-container tr:nth-child(2n + 1),
 #doneSection .table-container tr:nth-child(2n + 1) {
-    background-color: #eff6ff;
+    background-color: var(--bg-input);
 }
 
 .overdue-row {
-    border-left: 4px solid #ef4444;
-    background-color: #fef2f2 !important;
+    border-left: 4px solid var(--overdue-border);
+    background-color: var(--overdue-bg) !important;
 }
 
 .overdue-row:hover {
-    background-color: #fee2e2 !important;
+    background-color: var(--overdue-bg-hover) !important;
 }
 
 .progress-fill-overdue {
@@ -595,8 +656,97 @@ footer {
     position: sticky;
     top: 0;
     z-index: 11;
-    background-color: #f8fafc;
+    background-color: var(--bg-surface);
     background-clip: padding-box;
+}
+
+.mom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.mom-modal {
+    background: var(--bg-surface);
+    border-radius: 12px;
+    padding: 24px 28px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px var(--shadow-color);
+    color: var(--text-primary);
+}
+
+.mom-modal h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.mom-project-section {
+    margin-bottom: 20px;
+}
+
+.mom-project-section h3 {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.mom-project-list {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 8px;
+    background: var(--bg-surface);
+}
+
+.mom-project-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+.mom-project-checkbox:hover {
+    background: var(--bg-surface-alt);
+}
+
+.mom-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.theme-toggle-btn {
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 18px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--row-hover);
 }
 
 @media (max-width: 768px) {
